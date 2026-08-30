@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Hardware Inspector — chú hề đeo kính một mắt</title>
+  <circle cx="76" cy="240" r="50" fill="#F4A259"/>
+  <circle cx="58" cy="300" r="58" fill="#F4A259"/>
+  <circle cx="80" cy="358" r="50" fill="#F4A259"/>
+  <circle cx="436" cy="240" r="50" fill="#F4A259"/>
+  <circle cx="454" cy="300" r="58" fill="#F4A259"/>
+  <circle cx="432" cy="358" r="50" fill="#F4A259"/>
+  <circle cx="140" cy="168" r="44" fill="#F4A259"/>
+  <circle cx="372" cy="168" r="44" fill="#F4A259"/>
+  <circle cx="256" cy="300" r="168" fill="#FFDCC0"/>
+  <circle cx="352" cy="278" r="18" fill="#232833"/>
+  <path d="M204 400 Q278 462 352 400" fill="none" stroke="#232833" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="278" cy="350" r="42" fill="#E5544B"/>
+  <circle cx="188" cy="272" r="88" fill="#4C8DFF" fill-opacity="0.22"/>
+  <circle cx="188" cy="272" r="88" fill="none" stroke="#4C8DFF" stroke-width="24"/>
+  <circle cx="188" cy="272" r="34" fill="#232833"/>
+</svg>

@@ -1,0 +1,28 @@
+<Application x:Class="HardwareInspector.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:HardwareInspector.App.ViewModels"
+             xmlns:loc="clr-namespace:HardwareInspector.App.Localization"
+             StartupUri="Views/MainWindow.xaml">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Themes/Dark.xaml" />
+        <ResourceDictionary Source="Themes/BrandIcon.xaml" />
+        <ResourceDictionary Source="Themes/Flags.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+
+      <vm:HexToBrushConverter x:Key="HexToBrush" />
+      <vm:SeverityToBrushConverter x:Key="SeverityToBrush" />
+      <vm:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+      <vm:NullToVisibilityConverter x:Key="NullToVisibility" />
+      <vm:ComponentKindToTextConverter x:Key="KindToText" />
+      <vm:RatingToTextConverter x:Key="RatingToText" />
+      <vm:RatingToBrushConverter x:Key="RatingToBrush" />
+      <vm:FlagKeyToImageConverter x:Key="FlagKeyToImage" />
+
+      <!-- Nguồn chuỗi giao diện: XAML tra theo khoá qua indexer -->
+      <loc:UiStrings x:Key="Ui" />
+    </ResourceDictionary>
+  </Application.Resources>
+</Application>

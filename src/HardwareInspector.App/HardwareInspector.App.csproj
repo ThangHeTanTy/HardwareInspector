@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>HardwareInspector.App</RootNamespace>
+    <AssemblyName>HardwareInspector</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <ItemGroup>
+    <!--
+      ApplicationIcon ở trên chỉ gắn icon vào file .exe cho Explorer và thanh tác vụ.
+      Muốn cửa sổ WPF dùng được thì file phải được nhúng làm Resource để tham chiếu
+      qua pack URI trong XAML.
+    -->
+    <Resource Include="Assets\app.ico" />
+    <Resource Include="Assets\logo-256.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HardwareInspector.Core\HardwareInspector.Core.csproj" />
+    <ProjectReference Include="..\HardwareInspector.Collectors\HardwareInspector.Collectors.csproj" />
+    <ProjectReference Include="..\HardwareInspector.Sensors\HardwareInspector.Sensors.csproj" />
+    <ProjectReference Include="..\HardwareInspector.Firmware\HardwareInspector.Firmware.csproj" />
+    <ProjectReference Include="..\HardwareInspector.Analysis\HardwareInspector.Analysis.csproj" />
+    <ProjectReference Include="..\HardwareInspector.Benchmark\HardwareInspector.Benchmark.csproj" />
+    <ProjectReference Include="..\HardwareInspector.Reporting\HardwareInspector.Reporting.csproj" />
+  </ItemGroup>
+</Project>

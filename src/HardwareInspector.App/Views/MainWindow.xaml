@@ -1,0 +1,528 @@
+<Window x:Class="HardwareInspector.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:HardwareInspector.App.Localization"
+        Title="Hardware Inspector — Thẩm định phần cứng"
+        Icon="pack://application:,,,/Assets/app.ico"
+        Height="860" Width="1320" MinHeight="600" MinWidth="880"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BgBrush}">
+
+  <Grid Margin="18">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />   <!-- Thanh lệnh -->
+      <RowDefinition Height="Auto" />   <!-- Tiến độ -->
+      <RowDefinition Height="Auto" />   <!-- Kết luận -->
+      <RowDefinition Height="*" />      <!-- Nội dung -->
+      <RowDefinition Height="Auto" />   <!-- Trạng thái -->
+    </Grid.RowDefinitions>
+
+    <!-- ========== Thanh lệnh ========== -->
+    <!--
+      Dùng DockPanel + WrapPanel thay vì StackPanel ngang.
+      StackPanel ngang không bao giờ xuống dòng: khi cửa sổ hẹp hơn tổng bề rộng
+      các nút, những nút cuối hàng bị đẩy ra ngoài vùng nhìn thấy và biến mất
+      mà không có dấu hiệu gì. WrapPanel nhận đúng phần bề rộng còn lại từ DockPanel
+      nên tự xuống dòng khi hết chỗ.
+    -->
+    <DockPanel Grid.Row="0" Margin="0,0,0,14" LastChildFill="True">
+      <StackPanel DockPanel.Dock="Left" Orientation="Horizontal"
+                  VerticalAlignment="Center" Margin="0,0,16,0">
+        <Image Source="{StaticResource AppIconDrawing}" Width="46" Height="46"
+               Margin="0,0,12,0" VerticalAlignment="Center" />
+        <StackPanel VerticalAlignment="Center">
+          <TextBlock Text="{Binding [App.Eyebrow], Source={StaticResource Ui}}" Style="{StaticResource Eyebrow}" />
+          <TextBlock Text="{Binding MachineTitle}" Style="{StaticResource H1}"
+                     TextTrimming="CharacterEllipsis" MaxWidth="340" />
+        </StackPanel>
+      </StackPanel>
+
+      <WrapPanel HorizontalAlignment="Right" VerticalAlignment="Center"
+                 Orientation="Horizontal" ItemHeight="42">
+        <Button Content="{Binding [Btn.Scan], Source={StaticResource Ui}}" Command="{Binding ScanCommand}"
+                Style="{StaticResource PrimaryButton}" Margin="0,0,8,4" />
+
+        <Button Content="{Binding [Btn.Stress], Source={StaticResource Ui}}" Command="{Binding StressCommand}" Margin="0,0,8,4"
+                ToolTip="{Binding [Btn.Stress.Tip], Source={StaticResource Ui}}" />
+
+        <!-- Ô chọn màn hình đi liền với nút kiểm tra màn hình để hai thứ
+             luôn xuống dòng cùng nhau, tránh bị tách rời khi cửa sổ hẹp. -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,8,4"
+                    Visibility="{Binding HasResult, Converter={StaticResource BoolToVisibility}}">
+          <ComboBox ItemsSource="{Binding Displays}"
+                    SelectedItem="{Binding SelectedDisplay, Mode=TwoWay}"
+                    MinWidth="190" MaxWidth="280" Margin="0,0,6,0"
+                    VerticalAlignment="Center"
+                    ToolTip="{Binding [Combo.Display.Tip], Source={StaticResource Ui}}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding DisplayLabel}" TextTrimming="CharacterEllipsis"
+                           TextWrapping="NoWrap" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <Button Content="{Binding [Btn.ScreenTest], Source={StaticResource Ui}}" Command="{Binding ScreenTestCommand}" Margin="0" />
+        </StackPanel>
+
+        <Button Content="{Binding [Btn.ExportHtml], Source={StaticResource Ui}}" Command="{Binding ExportHtmlCommand}" Margin="0,0,8,4" />
+        <Button Content="{Binding [Btn.ExportJson], Source={StaticResource Ui}}" Command="{Binding ExportJsonCommand}" Margin="0,0,8,4" />
+        <Button Content="{Binding [Btn.Cancel], Source={StaticResource Ui}}" Command="{Binding CancelCommand}" Margin="0,0,8,4" />
+
+        <!-- Chọn ngôn ngữ: cờ vẽ vector nên sắc nét ở mọi mức thu phóng DPI -->
+        <ComboBox ItemsSource="{Binding Languages}"
+                  SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
+                  MinWidth="132" Margin="0,0,0,4" VerticalAlignment="Center">
+          <ComboBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal">
+                <Border BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="2"
+                        Margin="0,0,9,0" VerticalAlignment="Center" SnapsToDevicePixels="True">
+                  <Image Width="22" Height="15" Source="{Binding FlagKey,
+                         Converter={StaticResource FlagKeyToImage}}" />
+                </Border>
+                <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" />
+              </StackPanel>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </WrapPanel>
+    </DockPanel>
+
+    <!--
+      Khối tiến độ: tên bước bên trái, phần trăm bên phải, thanh chạy bên dưới.
+
+      Mode=OneWay là bắt buộc: RangeBase.Value mặc định bind TwoWay, mà Progress
+      chỉ có setter private nên binding engine coi là read-only và sẽ ném
+      InvalidOperationException ngay lúc gắn binding.
+    -->
+    <StackPanel Grid.Row="1" Margin="0,0,0,14"
+                Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
+      <DockPanel Margin="0,0,0,6">
+        <TextBlock DockPanel.Dock="Right" Text="{Binding ProgressText}"
+                   FontSize="12" FontWeight="SemiBold"
+                   Foreground="{StaticResource AccentBrush}" Margin="12,0,0,0" />
+        <TextBlock Text="{Binding Stage}" Style="{StaticResource Dim}"
+                   TextTrimming="CharacterEllipsis" />
+      </DockPanel>
+      <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="100" Height="4" />
+    </StackPanel>
+
+    <!-- ========== Kết luận tổng ========== -->
+    <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,0,0,14"
+            Visibility="{Binding HasResult, Converter={StaticResource BoolToVisibility}}">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Điểm tổng -->
+        <Border Grid.Column="0" CornerRadius="10" Padding="22,14" MinWidth="128"
+                BorderThickness="2"
+                BorderBrush="{Binding OverallColor, Converter={StaticResource HexToBrush}}">
+          <StackPanel HorizontalAlignment="Center">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+              <TextBlock Text="{Binding OverallScoreText}" FontSize="40" FontWeight="Bold"
+                         Foreground="{Binding OverallColor, Converter={StaticResource HexToBrush}}" />
+              <TextBlock Text="/100" FontSize="15" VerticalAlignment="Bottom" Margin="3,0,0,7"
+                         Style="{StaticResource Dim}" />
+            </StackPanel>
+            <TextBlock Text="{Binding OverallRatingText}" FontWeight="SemiBold"
+                       HorizontalAlignment="Center"
+                       Foreground="{Binding OverallColor, Converter={StaticResource HexToBrush}}" />
+          </StackPanel>
+        </Border>
+
+        <!-- Tóm tắt -->
+        <StackPanel Grid.Column="1" Margin="22,0">
+          <TextBlock Text="{Binding SummaryText}" Margin="0,0,0,8" />
+          <TextBlock Text="{Binding TrustVerdict}" Style="{StaticResource Dim}" />
+        </StackPanel>
+
+        <!-- Hai chỉ số then chốt -->
+        <StackPanel Grid.Column="2" MinWidth="230">
+          <TextBlock Text="{Binding [Verdict.Trust], Source={StaticResource Ui}}" Style="{StaticResource Eyebrow}" />
+          <TextBlock Text="{Binding TrustLevelText}" FontWeight="SemiBold" FontSize="15"
+                     Margin="0,2,0,12" />
+          <TextBlock Text="{Binding [Verdict.Firmware], Source={StaticResource Ui}}" Style="{StaticResource Eyebrow}" />
+          <TextBlock Text="{Binding FirmwareStatusText}" FontWeight="SemiBold" FontSize="15"
+                     Margin="0,2,0,0"
+                     Foreground="{Binding FirmwareColor, Converter={StaticResource HexToBrush}}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- ========== Nội dung ========== -->
+    <TabControl Grid.Row="3" Background="Transparent" BorderThickness="0"
+                Foreground="{StaticResource TextBrush}">
+
+      <!-- Tab 1: Linh kiện -->
+      <TabItem Header="{Binding [Tab.Components], Source={StaticResource Ui}}">
+        <Grid Margin="0,12,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="330" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+
+          <!-- Danh sách linh kiện -->
+          <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,12,0">
+            <ListBox ItemsSource="{Binding Components}"
+                     SelectedItem="{Binding SelectedComponent, Mode=TwoWay}">
+              <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                  <Setter Property="Padding" Value="10,9" />
+                  <Setter Property="Margin" Value="0,0,0,4" />
+                  <Setter Property="Template">
+                    <Setter.Value>
+                      <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" CornerRadius="6" Padding="{TemplateBinding Padding}"
+                                Background="Transparent" BorderThickness="1" BorderBrush="Transparent">
+                          <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                          <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#1E222B" />
+                          </Trigger>
+                          <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#1E222B" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                          </Trigger>
+                        </ControlTemplate.Triggers>
+                      </ControlTemplate>
+                    </Setter.Value>
+                  </Setter>
+                </Style>
+              </ListBox.ItemContainerStyle>
+
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="4" />
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Rectangle Grid.Column="0" Width="3" RadiusX="2" RadiusY="2"
+                               Fill="{Binding Rating, Converter={StaticResource RatingToBrush}}" />
+
+                    <StackPanel Grid.Column="1" Margin="10,0,8,0">
+                      <TextBlock Text="{Binding Kind, Converter={StaticResource KindToText}}"
+                                 FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding DisplayName}" Style="{StaticResource Dim}"
+                                 TextTrimming="CharacterEllipsis" MaxWidth="210"
+                                 HorizontalAlignment="Left" />
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="2" VerticalAlignment="Center" FontWeight="SemiBold"
+                               Text="{Binding Rating, Converter={StaticResource RatingToText}}"
+                               Foreground="{Binding Rating, Converter={StaticResource RatingToBrush}}" />
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Border>
+
+          <!-- Chi tiết linh kiện -->
+          <Border Grid.Column="1" Style="{StaticResource Card}">
+            <ScrollViewer>
+              <StackPanel DataContext="{Binding SelectedComponent}">
+
+                <!-- Tiêu đề + nút sao chép toàn bộ -->
+                <DockPanel LastChildFill="True">
+                  <Button DockPanel.Dock="Right" Content="{Binding [Btn.CopyAll], Source={StaticResource Ui}}" Margin="12,0,0,0"
+                          VerticalAlignment="Top"
+                          Command="{Binding DataContext.CopyComponentCommand,
+                                    RelativeSource={RelativeSource AncestorType=Window}}"
+                          ToolTip="{Binding [Btn.CopyAll.Tip], Source={StaticResource Ui}}" />
+                  <TextBox Text="{Binding DisplayName, Mode=OneWay}"
+                           Style="{StaticResource SelectableTitle}" />
+                </DockPanel>
+
+                <TextBox Text="{Binding Headline, Mode=OneWay}"
+                         Style="{StaticResource SelectableDim}" Margin="0,4,0,4" />
+
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,16">
+                  <Border CornerRadius="999" Padding="10,3" Margin="0,0,8,0" Background="#1E222B">
+                    <TextBlock Foreground="{Binding Rating, Converter={StaticResource RatingToBrush}}"
+                               FontWeight="SemiBold"
+                               Text="{Binding Rating, Converter={StaticResource RatingToText}}" />
+                  </Border>
+                  <Border CornerRadius="999" Padding="10,3" Background="#1E222B">
+                    <TextBlock>
+                      <Run Text="{Binding [Detail.Score], Source={StaticResource Ui}, Mode=OneWay}" Foreground="#9AA0AA" /><Run Text="{Binding Score, Mode=OneWay}" /><Run Text="/100" Foreground="#9AA0AA" />
+                    </TextBlock>
+                  </Border>
+                </StackPanel>
+
+                <!-- Thông số: nhãn và giá trị đều bôi đen được -->
+                <TextBlock Text="{Binding [Detail.Specs], Source={StaticResource Ui}}" Style="{StaticResource H2}" />
+                <ItemsControl ItemsSource="{Binding Metrics}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Grid Margin="0,0,0,7">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="230" />
+                          <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" Text="{Binding Label, Mode=OneWay}"
+                                 Style="{StaticResource SelectableDim}"
+                                 VerticalAlignment="Top" Margin="0,0,12,0" />
+                        <StackPanel Grid.Column="1">
+                          <TextBox Text="{Binding Value, Mode=OneWay}"
+                                   Style="{StaticResource SelectableText}" />
+                          <TextBox Text="{Binding Note, Mode=OneWay}"
+                                   Style="{StaticResource SelectableDim}" FontSize="11.5"
+                                   Visibility="{Binding Note, Converter={StaticResource NullToVisibility}}" />
+                        </StackPanel>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Cảm biến -->
+                <TextBlock Text="{Binding [Detail.Sensors], Source={StaticResource Ui}}" Style="{StaticResource H2}"
+                           Margin="0,20,0,8" />
+                <ItemsControl ItemsSource="{Binding Sensors}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Grid Margin="0,0,0,5">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="230" />
+                          <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" Text="{Binding SensorName, Mode=OneWay}"
+                                 Style="{StaticResource SelectableDim}" Margin="0,0,12,0" />
+                        <TextBlock Grid.Column="1">
+                          <Run Text="{Binding Min, StringFormat={}{0:0.#}, Mode=OneWay}" />
+                          <Run Text=" / " Foreground="#6C727D" />
+                          <Run Text="{Binding Average, StringFormat={}{0:0.#}, Mode=OneWay}" />
+                          <Run Text=" / " Foreground="#6C727D" />
+                          <Run Text="{Binding Max, StringFormat={}{0:0.#}, Mode=OneWay}" FontWeight="SemiBold" />
+                          <Run Text=" " /><Run Text="{Binding Unit, Mode=OneWay}" Foreground="#9AA0AA" />
+                        </TextBlock>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Phát hiện -->
+                <TextBlock Text="{Binding [Detail.Findings], Source={StaticResource Ui}}" Style="{StaticResource H2}"
+                           Margin="0,20,0,8" />
+                <ItemsControl ItemsSource="{Binding Findings}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border BorderThickness="3,0,0,0" Padding="12,6,0,6" Margin="0,0,0,12"
+                              BorderBrush="{Binding Severity, Converter={StaticResource SeverityToBrush}}">
+                        <StackPanel>
+                          <TextBox Text="{Binding Title, Mode=OneWay}"
+                                   Style="{StaticResource SelectableStrong}" />
+                          <TextBox Text="{Binding Detail, Mode=OneWay}"
+                                   Style="{StaticResource SelectableDim}" Margin="0,3,0,0"
+                                   Visibility="{Binding Detail, Converter={StaticResource NullToVisibility}}" />
+                          <TextBox Text="{Binding Recommendation, Mode=OneWay}"
+                                   Style="{StaticResource SelectableAccent}" Margin="0,4,0,0"
+                                   Visibility="{Binding Recommendation, Converter={StaticResource NullToVisibility}}" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
+          </Border>
+        </Grid>
+      </TabItem>
+
+      <!-- Tab 2: BIOS & bảo mật -->
+      <TabItem Header="{Binding [Tab.Firmware], Source={StaticResource Ui}}">
+        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+          <ScrollViewer>
+            <StackPanel>
+              <TextBlock Text="{Binding [Fw.Eyebrow], Source={StaticResource Ui}}" Style="{StaticResource Eyebrow}" />
+              <TextBlock Text="{Binding FirmwareStatusText}" FontSize="20" FontWeight="SemiBold"
+                         Margin="0,4,0,4"
+                         Foreground="{Binding FirmwareColor, Converter={StaticResource HexToBrush}}" />
+              <TextBlock Style="{StaticResource Dim}" Margin="0,0,0,18"
+                         Text="{Binding [Fw.Intro], Source={StaticResource Ui}}" />
+
+              <ItemsControl ItemsSource="{Binding FirmwareFindings}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border BorderThickness="3,0,0,0" Padding="12,8,0,8" Margin="0,0,0,14"
+                            BorderBrush="{Binding Severity, Converter={StaticResource SeverityToBrush}}">
+                      <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                          <TextBlock Text="{Binding Code}" Style="{StaticResource Dim}"
+                                     FontFamily="Consolas" Margin="0,0,10,0" />
+                          <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding Detail}" Style="{StaticResource Dim}" Margin="0,4,0,0" />
+                        <TextBlock Foreground="{StaticResource AccentBrush}" Margin="0,5,0,0" FontSize="12"
+                                   Visibility="{Binding Recommendation, Converter={StaticResource NullToVisibility}}">
+                          <Run Text="{Binding [Detail.Action], Source={StaticResource Ui}, Mode=OneWay}" FontWeight="SemiBold" /><Run Text="{Binding Recommendation, Mode=OneWay}" />
+                        </TextBlock>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+      </TabItem>
+
+      <!-- Tab 3: Đối chiếu chéo -->
+      <TabItem Header="{Binding [Tab.CrossCheck], Source={StaticResource Ui}}">
+        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+          <ScrollViewer>
+            <StackPanel>
+              <TextBlock Text="{Binding [Cross.Eyebrow], Source={StaticResource Ui}}" Style="{StaticResource Eyebrow}" />
+              <TextBlock Style="{StaticResource Dim}" Margin="0,6,0,18"
+                         Text="{Binding [Cross.Intro], Source={StaticResource Ui}}" />
+
+              <ItemsControl ItemsSource="{Binding CrossChecks}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid Margin="0,0,0,14">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="26" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Grid.Column="0" FontSize="15" FontWeight="Bold" VerticalAlignment="Top">
+                        <TextBlock.Style>
+                          <Style TargetType="TextBlock">
+                            <Setter Property="Text" Value="!" />
+                            <Setter Property="Foreground" Value="#F4A259" />
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding Passed}" Value="True">
+                                <Setter Property="Text" Value="✓" />
+                                <Setter Property="Foreground" Value="#2FBF71" />
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </TextBlock.Style>
+                      </TextBlock>
+                      <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Explanation}" Style="{StaticResource Dim}" Margin="0,3,0,0" />
+                      </StackPanel>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+      </TabItem>
+
+      <!-- Tab 4: Bài kiểm tra tải -->
+      <TabItem Header="{Binding [Tab.Benchmark], Source={StaticResource Ui}}">
+        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+          <ScrollViewer>
+            <StackPanel>
+              <TextBlock Text="{Binding [Bench.Eyebrow], Source={StaticResource Ui}}" Style="{StaticResource Eyebrow}" />
+              <TextBlock Style="{StaticResource Dim}" Margin="0,6,0,18"
+                         Text="{Binding [Bench.Intro], Source={StaticResource Ui}}" />
+
+              <ItemsControl ItemsSource="{Binding BenchmarkResults}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid Margin="0,0,0,12">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="260" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Grid.Column="0" Text="{Binding Name}" Style="{StaticResource Dim}" />
+                      <StackPanel Grid.Column="1">
+                        <TextBlock FontWeight="SemiBold">
+                          <Run Text="{Binding Value, Mode=OneWay}" /><Run Text=" " /><Run Text="{Binding Unit, Mode=OneWay}" />
+                        </TextBlock>
+                        <TextBlock Text="{Binding Detail}" Style="{StaticResource Dim}" FontSize="11.5" />
+                      </StackPanel>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+      </TabItem>
+
+
+      <!-- Tab: Bảo hành -->
+      <TabItem Header="{Binding [Tab.Warranty], Source={StaticResource Ui}}">
+        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+          <ScrollViewer>
+            <StackPanel>
+              <TextBlock Text="{Binding [War.Eyebrow], Source={StaticResource Ui}}" Style="{StaticResource Eyebrow}" />
+              <TextBlock Style="{StaticResource Dim}" Margin="0,6,0,18"
+                         Text="{Binding [War.Intro], Source={StaticResource Ui}}" />
+
+              <ItemsControl ItemsSource="{Binding WarrantyLookups}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Background="#1E222B" CornerRadius="7" Padding="14,11" Margin="0,0,0,10">
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                          <TextBlock FontWeight="SemiBold">
+                            <Run Text="{Binding Component, Converter={StaticResource KindToText}, Mode=OneWay}" Foreground="#9AA0AA" />
+                            <Run Text=" · " Foreground="#6C727D" />
+                            <Run Text="{Binding ComponentName, Mode=OneWay}" />
+                          </TextBlock>
+                          <TextBlock Style="{StaticResource Dim}" Margin="0,3,0,0">
+                            <Run Text="{Binding [War.Vendor], Source={StaticResource Ui}, Mode=OneWay}" /><Run Text="{Binding Vendor, Mode=OneWay}" />
+                            <Run Text="{Binding [War.Serial], Source={StaticResource Ui}, Mode=OneWay}" /><Run Text="{Binding Serial, Mode=OneWay, TargetNullValue=—}" FontFamily="Consolas" />
+                          </TextBlock>
+                          <TextBlock Text="{Binding Note}" Style="{StaticResource Dim}" Margin="0,6,0,0" FontSize="12" />
+                        </StackPanel>
+
+                        <Button Grid.Column="1" Content="{Binding [Btn.OpenWarranty], Source={StaticResource Ui}}" VerticalAlignment="Top"
+                                Click="OnWarrantyClick" Tag="{Binding}" Margin="0" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+      </TabItem>
+
+      <!-- Tab: Việc cần làm tay -->
+      <TabItem Header="{Binding [Tab.Manual], Source={StaticResource Ui}}">
+        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+          <ScrollViewer>
+            <StackPanel>
+              <TextBlock Text="{Binding [Man.Eyebrow], Source={StaticResource Ui}}" Style="{StaticResource Eyebrow}" />
+              <TextBlock Style="{StaticResource Dim}" Margin="0,6,0,18"
+                         Text="{Binding [Man.Intro], Source={StaticResource Ui}}" />
+
+              <ItemsControl ItemsSource="{Binding ManualChecklist}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <CheckBox Margin="0,0,0,10" Foreground="{StaticResource TextBrush}">
+                      <TextBlock Text="{Binding}" TextWrapping="Wrap" MaxWidth="820" />
+                    </CheckBox>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+      </TabItem>
+    </TabControl>
+
+    <!-- ========== Trạng thái ========== -->
+    <Border Grid.Row="4" Margin="0,12,0,0" Padding="12,8"
+            Background="{StaticResource PanelBrush}" CornerRadius="6">
+      <TextBlock Text="{Binding Status}" Style="{StaticResource Dim}" />
+    </Border>
+  </Grid>
+</Window>

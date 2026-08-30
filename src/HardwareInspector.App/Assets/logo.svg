@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Hardware Inspector — logo đầy đủ</title>
+  <circle cx="76" cy="248" r="50" fill="#F4A259"/>
+  <circle cx="58" cy="308" r="58" fill="#F4A259"/>
+  <circle cx="80" cy="366" r="50" fill="#F4A259"/>
+  <circle cx="436" cy="248" r="50" fill="#F4A259"/>
+  <circle cx="454" cy="308" r="58" fill="#F4A259"/>
+  <circle cx="432" cy="366" r="50" fill="#F4A259"/>
+  <circle cx="140" cy="182" r="44" fill="#F4A259"/>
+  <polygon points="242,164 348,192 322,64" fill="#E5544B"/>
+  <circle cx="322" cy="56" r="26" fill="#2FBF71"/>
+  <circle cx="256" cy="308" r="168" fill="#FFDCC0"/>
+  <circle cx="352" cy="286" r="18" fill="#232833"/>
+  <path d="M204 408 Q278 470 352 408" fill="none" stroke="#232833" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="278" cy="358" r="42" fill="#E5544B"/>
+  <path d="M170 364 Q134 428 152 474" fill="none" stroke="#3A6FD8" stroke-width="11" stroke-linecap="round"/>
+  <circle cx="152" cy="476" r="17" fill="#3A6FD8"/>
+  <circle cx="188" cy="280" r="88" fill="#4C8DFF" fill-opacity="0.22"/>
+  <circle cx="188" cy="280" r="88" fill="none" stroke="#4C8DFF" stroke-width="24"/>
+  <circle cx="188" cy="280" r="34" fill="#232833"/>
+</svg>

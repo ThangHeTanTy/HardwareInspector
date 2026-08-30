@@ -1,0 +1,100 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Cờ vẽ bằng vector thay vì nhúng file ảnh.
+
+    Lý do giống hệt trường hợp icon ứng dụng: ô chọn ngôn ngữ hiển thị cờ ở cỡ
+    khoảng 20x14, nhưng trên máy đặt DPI 150% con số thật là 30x21. Ảnh bitmap
+    ở một cỡ cố định sẽ vỡ ở mức thu phóng khác. Cờ lại toàn hình khối phẳng
+    nên chuyển sang vector rất gọn.
+
+    Khung chuẩn 60x40, tỉ lệ 3:2.
+  -->
+
+  <!-- Việt Nam: nền đỏ, sao vàng năm cánh chính giữa -->
+  <DrawingImage x:Key="FlagVietnamese">
+    <DrawingImage.Drawing>
+      <DrawingGroup>
+        <GeometryDrawing Brush="#DA251D">
+          <GeometryDrawing.Geometry>
+            <RectangleGeometry Rect="0,0,60,40" />
+          </GeometryDrawing.Geometry>
+        </GeometryDrawing>
+        <GeometryDrawing Brush="#FFFF00">
+          <GeometryDrawing.Geometry>
+            <PathGeometry Figures="M30.00,7.00 L33.00,15.87 L42.36,15.98 L34.85,21.58 L37.64,30.52 L30.00,25.10 L22.36,30.52 L25.15,21.58 L17.64,15.98 L27.00,15.87 Z" />
+          </GeometryDrawing.Geometry>
+        </GeometryDrawing>
+      </DrawingGroup>
+    </DrawingImage.Drawing>
+  </DrawingImage>
+
+  <!--
+    Anh quốc. Các dải chéo phải được cắt gọn theo khung cờ, nếu không chúng
+    sẽ tràn ra ngoài và làm hỏng bố cục ô chọn — vì vậy cả nhóm đặt ClipGeometry.
+
+    Thứ tự vẽ theo đúng cách lá cờ được dựng: nền lam, chéo trắng, chéo đỏ,
+    rồi thập trắng và thập đỏ đè lên trên cùng.
+  -->
+  <DrawingImage x:Key="FlagEnglish">
+    <DrawingImage.Drawing>
+      <DrawingGroup ClipGeometry="M0,0 L60,0 L60,40 L0,40 Z">
+
+        <GeometryDrawing Brush="#012169">
+          <GeometryDrawing.Geometry>
+            <RectangleGeometry Rect="0,0,60,40" />
+          </GeometryDrawing.Geometry>
+        </GeometryDrawing>
+
+        <!-- Chéo trắng -->
+        <GeometryDrawing>
+          <GeometryDrawing.Pen>
+            <Pen Brush="#FFFFFF" Thickness="9" />
+          </GeometryDrawing.Pen>
+          <GeometryDrawing.Geometry>
+            <GeometryGroup FillRule="Nonzero">
+              <LineGeometry StartPoint="0,0" EndPoint="60,40" />
+              <LineGeometry StartPoint="60,0" EndPoint="0,40" />
+            </GeometryGroup>
+          </GeometryDrawing.Geometry>
+        </GeometryDrawing>
+
+        <!-- Chéo đỏ, mảnh hơn và lệch để tạo hiệu ứng so le đặc trưng -->
+        <GeometryDrawing>
+          <GeometryDrawing.Pen>
+            <Pen Brush="#C8102E" Thickness="3.2" />
+          </GeometryDrawing.Pen>
+          <GeometryDrawing.Geometry>
+            <GeometryGroup FillRule="Nonzero">
+              <LineGeometry StartPoint="0,0" EndPoint="60,40" />
+              <LineGeometry StartPoint="60,0" EndPoint="0,40" />
+            </GeometryGroup>
+          </GeometryDrawing.Geometry>
+        </GeometryDrawing>
+
+        <!-- Thập trắng -->
+        <GeometryDrawing Brush="#FFFFFF">
+          <GeometryDrawing.Geometry>
+            <GeometryGroup FillRule="Nonzero">
+              <RectangleGeometry Rect="0,14,60,12" />
+              <RectangleGeometry Rect="24,0,12,40" />
+            </GeometryGroup>
+          </GeometryDrawing.Geometry>
+        </GeometryDrawing>
+
+        <!-- Thập đỏ -->
+        <GeometryDrawing Brush="#C8102E">
+          <GeometryDrawing.Geometry>
+            <GeometryGroup FillRule="Nonzero">
+              <RectangleGeometry Rect="0,16.5,60,7" />
+              <RectangleGeometry Rect="26.5,0,7,40" />
+            </GeometryGroup>
+          </GeometryDrawing.Geometry>
+        </GeometryDrawing>
+
+      </DrawingGroup>
+    </DrawingImage.Drawing>
+  </DrawingImage>
+
+</ResourceDictionary>
