@@ -41,7 +41,7 @@ public sealed class TrustReport
     public string Verdict { get; set; } = string.Empty;
     public List<CrossCheckResult> CrossChecks { get; } = new();
     public List<Finding> RedFlags { get; } = new();
-    public List<string> ManualChecklist { get; } = new();
+    public List<ManualCheckItem> ManualChecklist { get; } = new();
 }
 
 public sealed class MachineAssessment
