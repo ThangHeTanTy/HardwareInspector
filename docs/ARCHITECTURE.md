@@ -41,7 +41,7 @@ chứ không phải ở `Collectors/Native`.
 | `Sensors` | Đo nhiệt độ, xung nhịp, quạt qua LibreHardwareMonitor | Kết luận về sức khoẻ |
 | `Firmware` | SMBIOS thô, bảng ACPI, biến UEFI, TPM, quét ESP | Chấm điểm linh kiện khác |
 | `Analysis` | Biến dữ liệu thô thành đánh giá, điểm số, cảnh báo, kết luận tin cậy | Đọc dữ liệu trực tiếp từ hệ thống |
-| `Benchmark` | Tạo tải để bộc lộ vấn đề nhiệt | Đánh giá kết quả |
+| `Benchmark` | Tạo tải để bộc lộ vấn đề nhiệt; ghi lại dữ kiện thô của bài GPU (`GpuTestResult`) | Đánh giá kết quả |
 | `Reporting` | Xuất HTML và JSON | Thu thập hay phân tích |
 | `App` | Giao diện WPF, điều phối pipeline | Chứa logic nghiệp vụ |
 
@@ -99,7 +99,8 @@ MachineAssessment  (thứ giao diện và báo cáo tiêu thụ)
 
 - .NET 8 SDK, Windows 10 1809 trở lên
 - Chạy quyền Administrator (đã khai báo trong `app.manifest`)
-- `dotnet restore` cần mạng để tải `LibreHardwareMonitorLib` và `System.Management`
+- `dotnet restore` cần mạng để tải `LibreHardwareMonitorLib`, `System.Management` và `Vortice.Direct3D11`
+- Bài kiểm tra GPU cần card hỗ trợ Direct3D 11 (feature level 11_0); shader biên dịch lúc chạy bằng `d3dcompiler_47.dll` có sẵn trong Windows
 
 ```bash
 dotnet restore

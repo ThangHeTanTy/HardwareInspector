@@ -112,6 +112,29 @@ nằm ở việc chạy tải nặng 15 phút rồi quan sát:
 - **Xung nhịp đạt được so với thiết kế.** Chỉ đạt 70% xung thiết kế nghĩa là
   có thứ gì đó đang giới hạn: nhiệt, công suất, hoặc BIOS.
 
+### Tầng 5b — GPU: để phần mềm tự so từng bit
+
+Card đồ hoạ không có đồng hồ đếm giờ. Cách duy nhất để biết nó còn khoẻ là bắt nó làm việc
+nặng rồi kiểm tra kết quả. Bài kiểm tra GPU trong ứng dụng gồm hai phần, chạy nối tiếp:
+
+1. **Tải nặng 5 phút có đối chiếu.** Compute shader chạy chuỗi phép nhân-cộng trên hàng trăm nghìn
+   luồng. Kết quả lấy lúc card còn nguội làm chuẩn; sau đó cứ khoảng 250 ms lại tính lại và so
+   đến từng bit. Cùng phép tính, cùng dữ liệu thì card khoẻ luôn cho kết quả giống hệt —
+   **lệch dù một lần là nhân đồ hoạ không còn ổn định khi nóng.** Hiệu năng phút cuối so với
+   phút đầu cho biết card có tự hạ xung không.
+2. **Kiểm tra VRAM khi card còn nóng.** Chip nhớ yếu thường chỉ trả sai dữ liệu khi đã nóng,
+   nên kiểm lúc nguội sẽ bỏ sót đúng loại lỗi hay gặp nhất ở card từng đào coin.
+   Ghi mẫu giả ngẫu nhiên phụ thuộc địa chỉ lên ~80% VRAM riêng, ghi hết rồi mới đọc lại,
+   xen kẽ mẫu gốc và mẫu đảo bit để mỗi bit đều được thử ở cả 0 lẫn 1.
+
+Nếu driver sập giữa bài (Windows reset GPU), đó cũng là một kết luận: card khoẻ chạy tải
+bao lâu cũng không làm driver sập. Nhật ký sự kiện `Display 4101` trong 90 ngày cho biết
+điều này đã từng xảy ra trước khi bạn cầm máy hay chưa.
+
+Trên laptop hai GPU, bài kiểm tra chủ động chọn card rời — nếu để mặc định, Windows sẽ
+đưa ứng dụng vào GPU tích hợp và bài kiểm tra chẳng chạm gì tới card đang được quảng cáo.
+Nhớ cắm sạc khi chạy, nếu không card bị giới hạn công suất và số liệu sai lệch.
+
 ### Tầng 6 — Màn hình: EDID trả lời câu hỏi, mắt trả lời phần còn lại
 
 EDID chứa mã tấm nền thật và tuần/năm sản xuất. Tấm nền sản xuất muộn hơn
@@ -129,6 +152,8 @@ Trong 90 ngày gần nhất:
 - **WHEA** ghi lỗi ở mức CPU, RAM và bus PCIe. Số lượng lớn thường đi kèm RAM lỗi
   hoặc khe PCIe tiếp xúc kém.
 - **Disk event 7 / 51 / 153** báo lỗi truy cập ổ — thường xuất hiện *sớm hơn* cả S.M.A.R.T.
+- **Display 4101** là driver đồ hoạ ngừng phản hồi và bị Windows reset (TDR). Lặp lại nhiều lần
+  thường đi kèm card quá nhiệt, VRAM lỗi hoặc nguồn cấp cho card yếu.
 - **BugCheck** là màn hình xanh. Ba lần trở lên trong 90 ngày là chuyện cần giải thích.
 
 Lưu ý quan trọng: **Windows vừa cài lại thì nhật ký sạch trơn.**
@@ -165,8 +190,12 @@ Trung thực về giới hạn quan trọng ngang với việc phát hiện vấ
    cần tháo máy và dùng programmer SPI (CH341A hoặc tương đương). Phần mềm chỉ đọc được
    những gì firmware *khai báo* — mà một firmware đã bị can thiệp hoàn toàn có thể nói dối.
 2. **Không phát hiện được RAM lỗi nhẹ.** Phải chạy MemTest86 từ USB, ngoài Windows.
-3. **Không thấy artifact của GPU.** Điểm ảnh lỗi, sọc, chấm màu khi card yếu chỉ hiện
-   khi chạy tải đồ hoạ thật và nhìn bằng mắt.
+3. **Không nhìn thấy màn hình.** Bài kiểm tra GPU tự bắt được lỗi VRAM và lỗi tính toán,
+   nhưng lỗi chỉ xuất hiện ở khâu dựng hình 3D hoặc đường xuất tín hiệu (sọc, nhấp nháy,
+   mất hình qua một cổng) vẫn phải chạy tải đồ hoạ thật và nhìn bằng mắt. Ngoài ra, khi Windows
+   thiếu VRAM nó có thể lặng lẽ đẩy dữ liệu sang RAM hệ thống; phần mềm đã chừa khoảng trống
+   theo ngân sách VRAM mà Windows báo, nhưng không thể bảo đảm 100% từng byte đã kiểm
+   nằm trên chip nhớ của card.
 4. **Không đánh giá được tình trạng vật lý.** Tụ phồng, bản lề nứt, ốc toét, dấu ẩm mốc —
    tất cả đều phải mở máy ra nhìn.
 5. **Không kiểm tra được nguồn (PSU).** Với PC bàn, đây thường là linh kiện nguy hiểm nhất
