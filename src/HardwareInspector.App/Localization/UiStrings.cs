@@ -48,8 +48,8 @@ public sealed class UiStrings : INotifyPropertyChanged
         ["App.Eyebrow"] = new("THẨM ĐỊNH PHẦN CỨNG", "HARDWARE INSPECTION"),
         ["Btn.Scan"] = new("Bắt đầu kiểm tra", "Start inspection"),
         ["Btn.Stress"] = new("Chạy tải nặng", "Run stress test"),
-        ["Btn.Stress.Tip"] = new("Ép CPU, RAM và ổ đĩa chạy hết công suất rồi đo lại nhiệt độ",
-                                "Push CPU, RAM and disk to full load, then re-measure temperatures"),
+        ["Btn.Stress.Tip"] = new("Ép CPU, RAM, ổ đĩa rồi GPU chạy hết công suất, kiểm tra VRAM khi card còn nóng, sau đó đo lại nhiệt độ (khoảng 9 phút)",
+                                "Push CPU, RAM, disk and then the GPU to full load, test VRAM while the card is still hot, then re-measure temperatures (about 9 minutes)"),
         ["Btn.ScreenTest"] = new("Kiểm tra màn hình", "Test display"),
         ["Btn.ExportHtml"] = new("Xuất biên bản", "Export report"),
         ["Btn.ExportJson"] = new("Xuất JSON", "Export JSON"),
@@ -112,8 +112,8 @@ public sealed class UiStrings : INotifyPropertyChanged
         // --- Thẻ kiểm tra tay ---
         ["Man.Eyebrow"] = new("PHẦN MỀM KHÔNG THAY THẾ ĐƯỢC", "WHAT SOFTWARE CANNOT REPLACE"),
         ["Man.Intro"] = new(
-            "Danh sách này thay đổi theo những gì vừa phát hiện được trên máy. Hãy làm đủ trước khi trả tiền.",
-            "This list adapts to what was just found on this machine. Work through all of it before you hand over money."),
+            "Danh sách này thay đổi theo những gì vừa phát hiện được trên máy. Hãy làm đủ trước khi trả tiền. Nút bên dưới mỗi mục mở trang chính thức của công cụ chuyên dụng — đừng tải từ trang trung gian, đó là nguồn mã độc quen thuộc.",
+            "This list adapts to what was just found on this machine. Work through all of it before you hand over money. The buttons under each item open the official page of a specialist tool — avoid third-party download sites, a common source of malware."),
 
         // --- Trạng thái ---
         ["Status.Ready"] = new("Sẵn sàng. Nhấn \"Bắt đầu kiểm tra\" để quét toàn bộ máy.",
@@ -136,6 +136,7 @@ public sealed class UiStrings : INotifyPropertyChanged
         ["Msg.CopyFailed"] = new("Không chép được: {0}", "Copy failed: {0}"),
         ["Msg.DetailCopied"] = new("Đã chép chi tiết \"{0}\" vào clipboard.",
                                   "Copied the details of \"{0}\" to the clipboard."),
+        ["Msg.ToolOpened"] = new("Đã mở trang {0}: {1}", "Opened the {0} page: {1}"),
         ["Msg.LookupFailed"] = new("Không mở được trang tra cứu: {0}", "Could not open the lookup page: {0}"),
 
         // --- Nhãn dùng khi chép ra văn bản ---

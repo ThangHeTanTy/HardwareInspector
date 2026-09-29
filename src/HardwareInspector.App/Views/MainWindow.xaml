@@ -507,9 +507,39 @@
               <ItemsControl ItemsSource="{Binding ManualChecklist}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <CheckBox Margin="0,0,0,10" Foreground="{StaticResource TextBrush}">
-                      <TextBlock Text="{Binding}" TextWrapping="Wrap" MaxWidth="820" />
-                    </CheckBox>
+                    <StackPanel Margin="0,0,0,12">
+                      <CheckBox Foreground="{StaticResource TextBrush}">
+                        <TextBlock Text="{Binding Text}" TextWrapping="Wrap" MaxWidth="820" />
+                      </CheckBox>
+
+                      <!-- Công cụ chuyên dụng cho mục này. Rê chuột để xem cần nhìn vào đâu. -->
+                      <ItemsControl ItemsSource="{Binding Tools}" Margin="24,6,0,0"
+                                    Visibility="{Binding HasTools, Converter={StaticResource BoolToVisibility}}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" MaxWidth="820" HorizontalAlignment="Left" />
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Button Click="OnToolClick" Tag="{Binding}" Margin="0,0,6,6"
+                                    Padding="10,4" FontSize="12">
+                              <Button.ToolTip>
+                                <StackPanel MaxWidth="380">
+                                  <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                  <TextBlock Text="{Binding Cost}" Opacity="0.75" Margin="0,1,0,4" />
+                                  <TextBlock Text="{Binding Purpose}" TextWrapping="Wrap" />
+                                  <TextBlock Text="{Binding Url}" Opacity="0.6" Margin="0,4,0,0" FontSize="11" />
+                                </StackPanel>
+                              </Button.ToolTip>
+                              <TextBlock>
+                                <Run Text="↗ " /><Run Text="{Binding Name, Mode=OneWay}" /><Run Text="  ·  " Foreground="#6C727D" /><Run Text="{Binding Cost, Mode=OneWay}" Foreground="#9AA0AA" />
+                              </TextBlock>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>

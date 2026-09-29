@@ -4,6 +4,7 @@ using HardwareInspector.Collectors.EventLogs;
 using HardwareInspector.Core.Abstractions;
 using HardwareInspector.Core.Models;
 using HardwareInspector.Core.Models.Assessment;
+using HardwareInspector.Core.Models.Diagnostics;
 using HardwareInspector.Firmware;
 using HardwareInspector.Firmware.Upgrade;
 using HardwareInspector.Sensors;
@@ -24,6 +25,12 @@ public sealed class InspectionPipeline : IDisposable
     private readonly MachineAssessmentService _assessmentService = new();
 
     public ISensorMonitor SensorMonitor { get; }
+
+    /// <summary>
+    /// Kết quả bài kiểm tra GPU gần nhất. Giữ lại qua các lượt quét sau đó vì lỗi VRAM
+    /// hay driver sập là sự thật về phần cứng, không mất đi khi máy nguội.
+    /// </summary>
+    public GpuTestResult? LastGpuTest { get; set; }
 
     public InspectionPipeline()
     {
@@ -54,7 +61,7 @@ public sealed class InspectionPipeline : IDisposable
     public async Task<(SystemSnapshot Snapshot, MachineAssessment Assessment)> RunAsync(
         IProgress<InspectionProgress>? progress = null, CancellationToken ct = default)
     {
-        var snapshot = new SystemSnapshot();
+        var snapshot = new SystemSnapshot { GpuTest = LastGpuTest };
 
         // Bước phân tích cuối cũng chiếm thời gian nên tính luôn vào tổng trọng số,
         // nếu không thanh tiến độ sẽ nhảy tới 100% rồi mới đứng chờ.
