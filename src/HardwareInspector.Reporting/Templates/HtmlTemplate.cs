@@ -100,6 +100,10 @@ internal static class HtmlTemplate
           ul.crosschecks li p { margin: 3px 0 0; color: var(--dim); font-size: 14px; }
           ol.checklist { padding-left: 20px; margin: 0; }
           ol.checklist li { margin-bottom: 8px; }
+          ul.tools { list-style: none; padding: 0; margin: 5px 0 4px; }
+          ul.tools li { margin: 0 0 4px; font-size: 13px; color: var(--dim); }
+          ul.tools li a { font-weight: 600; }
+          ul.tools .cost { font-size: 11.5px; }
           .intro { color: var(--dim); margin: 0 0 14px; }
           code { font-family: Consolas, monospace; font-size: 12.5px;
                  background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 3px; }

@@ -7,7 +7,7 @@ namespace HardwareInspector.Collectors.EventLogs;
 /// <summary>
 /// Event Log là cuốn nhật ký mà người bán không xoá được dễ dàng.
 /// Ở đây ta truy các sự kiện phần cứng thật sự có giá trị chẩn đoán:
-/// WHEA (lỗi CPU/RAM/PCIe), lỗi đọc ghi ổ đĩa, và bugcheck (màn hình xanh).
+/// WHEA (lỗi CPU/RAM/PCIe), lỗi đọc ghi ổ đĩa, driver đồ hoạ bị reset, và bugcheck (màn hình xanh).
 /// </summary>
 public sealed class ReliabilityScanner : IInfoCollector
 {
@@ -36,6 +36,7 @@ public sealed class ReliabilityScanner : IInfoCollector
         var diskErrors = 0;
         var bugchecks = 0;
         var controllerErrors = 0;
+        var gpuResets = 0;
         DateTime? lastBugcheck = null;
 
         try
@@ -58,6 +59,9 @@ public sealed class ReliabilityScanner : IInfoCollector
                     bugchecks++;
                     lastBugcheck ??= entry.TimeGenerated;
                 }
+                // "Display driver stopped responding and has successfully recovered" (TDR).
+                else if (source.Equals("Display", StringComparison.OrdinalIgnoreCase) && id == 4101)
+                    gpuResets++;
                 else if (source.Contains("storahci", StringComparison.OrdinalIgnoreCase) ||
                          source.Contains("stornvme", StringComparison.OrdinalIgnoreCase) ||
                          source.Contains("iaStor", StringComparison.OrdinalIgnoreCase))
@@ -85,6 +89,14 @@ public sealed class ReliabilityScanner : IInfoCollector
             "Driver AHCI/NVMe báo lỗi reset thiết bị — thường do cáp, nguồn hoặc bản thân ổ sắp hỏng.",
             "Đổi cáp SATA hoặc thử ổ ở máy khác để khoanh vùng.",
             threshold: 1, penaltyPerEvent: 4, maxPenalty: 25);
+
+        AddIfAny(snapshot, gpuResets, "EVT-GPU-001", ComponentKind.Gpu,
+            "Driver đồ hoạ từng bị reset (TDR)",
+            "Event 4101 nghĩa là GPU ngừng phản hồi quá 2 giây và Windows phải khởi động lại driver. " +
+            "Thỉnh thoảng một lần có thể do driver lỗi; lặp lại nhiều lần thường là card quá nhiệt, " +
+            "VRAM lỗi hoặc nguồn cấp cho card không ổn định.",
+            "Chạy bài tải nặng GPU trong ứng dụng và xem driver có sập lại không.",
+            threshold: 1, penaltyPerEvent: 5, maxPenalty: 30);
 
         if (bugchecks > 0)
         {
