@@ -36,6 +36,13 @@ public partial class MainWindow : Window
             vm.OpenWarranty(lookup);
     }
 
+    private void OnToolClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button { Tag: Core.Models.Assessment.ToolLink tool }
+            && DataContext is MainViewModel vm)
+            vm.OpenTool(tool);
+    }
+
     /// <summary>Trải phẳng chuỗi InnerException — nguyên nhân thật thường nằm ở tầng sâu nhất.</summary>
     private static string Describe(Exception ex)
     {

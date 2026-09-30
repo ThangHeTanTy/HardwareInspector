@@ -348,44 +348,77 @@ public sealed class SecondHandTrustEngine
     /// <summary>
     /// Những thứ phần mềm không bao giờ thay thế được. Danh sách này thay đổi
     /// theo loại máy vì kiểm laptop và kiểm PC là hai công việc khác nhau.
+    ///
+    /// Mục nào có công cụ chuyên dụng làm tốt hơn thì gắn kèm đường dẫn tải chính thức,
+    /// để người dùng không phải tự tìm — và không lạc vào trang tải lậu gắn mã độc.
     /// </summary>
     private void BuildManualChecklist(SystemSnapshot snapshot, TrustReport report)
     {
         var list = report.ManualChecklist;
+        void Add(string text, params ToolLink[] tools) => list.Add(new ManualCheckItem(text, tools));
 
-        list.Add("Đối chiếu serial in trên tem máy với serial phần mềm đọc được trong mục Bo mạch chủ.");
-        list.Add("Tra serial trên trang bảo hành của hãng: model tra ra phải trùng với máy đang cầm, và xem còn hạn không.");
-        list.Add("Chạy bài kiểm tra màn hình trong phòng tối để soi điểm chết, điểm sáng và hở sáng viền.");
-        list.Add("Chạy bài tải nặng CPU/GPU ít nhất 15 phút, vừa chạy vừa theo dõi nhiệt độ và nghe tiếng quạt.");
-        list.Add("Cắm thử lần lượt từng cổng USB, HDMI, jack tai nghe, khe thẻ nhớ.");
-        list.Add("Kiểm tra Wi-Fi và Bluetooth bằng cách kết nối thật, không chỉ nhìn Device Manager.");
-        list.Add("Chạy MemTest86 từ USB nếu định giữ máy lâu — phần mềm trong Windows không phát hiện được RAM lỗi nhẹ.");
+        var gpu = snapshot.PrimaryGpu;
+        var gpuTest = snapshot.GpuTest;
+
+        Add("Đối chiếu serial in trên tem máy với serial phần mềm đọc được trong mục Bo mạch chủ.");
+        Add("Tra serial trên trang bảo hành của hãng: model tra ra phải trùng với máy đang cầm, và xem còn hạn không.");
+        Add("Chạy bài kiểm tra màn hình trong phòng tối để soi điểm chết, điểm sáng và hở sáng viền.",
+            ToolCatalog.EizoMonitorTest, ToolCatalog.TestUfo);
+        Add("Chạy bài tải nặng CPU/GPU ít nhất 15 phút, vừa chạy vừa theo dõi nhiệt độ và nghe tiếng quạt.",
+            ToolCatalog.HwInfo, ToolCatalog.Cinebench, ToolCatalog.Prime95);
+
+        if (gpu is { IsDiscrete: true })
+        {
+            var text = gpuTest is { HasHardErrors: true }
+                ? S("Bài kiểm tra GPU trong ứng dụng đã phát hiện lỗi. Chạy lại bằng một công cụ độc lập để xác nhận " +
+                    "trước khi mặc cả hoặc từ chối mua — hai công cụ cùng báo lỗi thì không còn gì để bàn.",
+                    "The in-app GPU test found errors. Re-run with an independent tool to confirm " +
+                    "before negotiating or walking away — two tools reporting errors leaves nothing to argue about.")
+                : S("Chạy một bài tải đồ hoạ 3D 15 phút và nhìn trực tiếp màn hình: sọc, chấm màu, nhấp nháy hay " +
+                    "treo hình là dấu hiệu card hỏng mà phần mềm không tự thấy được. Kiểm tra thêm khe PCIe có chạy đủ làn không.",
+                    "Run a 3D graphics load for 15 minutes and watch the screen yourself: stripes, coloured dots, flicker or " +
+                    "freezes are card faults software cannot see. Also check that the PCIe slot runs at full width.");
+            Add(text, ToolCatalog.Occt, ToolCatalog.FurMark, ToolCatalog.Superposition, ToolCatalog.ThreeDMark, ToolCatalog.GpuZ);
+        }
+
+        Add(S("Đối chiếu S.M.A.R.T. và đo tốc độ ổ bằng công cụ độc lập — số giờ chạy và dữ liệu đã ghi phải khớp với ứng dụng này.",
+              "Cross-check S.M.A.R.T. and measure drive speed with independent tools — power-on hours and total writes should match this app."),
+            ToolCatalog.CrystalDiskInfo, ToolCatalog.CrystalDiskMark);
+        Add("Cắm thử lần lượt từng cổng USB, HDMI, jack tai nghe, khe thẻ nhớ.");
+        Add("Kiểm tra Wi-Fi và Bluetooth bằng cách kết nối thật, không chỉ nhìn Device Manager.",
+            ToolCatalog.Speedtest);
+        Add("Chạy MemTest86 từ USB nếu định giữ máy lâu — phần mềm trong Windows không phát hiện được RAM lỗi nhẹ.",
+            ToolCatalog.MemTest86, ToolCatalog.MemTest86Plus);
 
         if (snapshot.IsLaptop)
         {
-            list.Add("Gõ thử toàn bộ bàn phím, đặc biệt các phím ít dùng ở hàng số và cụm điều hướng.");
-            list.Add("Kiểm tra bản lề: mở gập vài lần, nghe tiếng kêu và xem vỏ quanh bản lề có nứt hay phồng không.");
-            list.Add("Rút sạc và dùng thử ít nhất 30 phút để xem máy có tự tắt do pin sụt áp không.");
-            list.Add("Kiểm tra webcam, micro và loa — mở ứng dụng ghi âm và quay thử.");
-            list.Add("Soi ốc đáy máy: ốc toét đầu hoặc thiếu ốc nghĩa là máy đã được tháo nhiều lần.");
-            list.Add("Sờ vỏ máy khi chạy tải nặng để phát hiện điểm nóng bất thường.");
+            Add("Gõ thử toàn bộ bàn phím, đặc biệt các phím ít dùng ở hàng số và cụm điều hướng.",
+                ToolCatalog.KeyboardTest);
+            Add("Kiểm tra bản lề: mở gập vài lần, nghe tiếng kêu và xem vỏ quanh bản lề có nứt hay phồng không.");
+            Add("Rút sạc và dùng thử ít nhất 30 phút để xem máy có tự tắt do pin sụt áp không.",
+                ToolCatalog.BatteryInfoView);
+            Add("Kiểm tra webcam, micro và loa — mở ứng dụng ghi âm và quay thử.",
+                ToolCatalog.WebcamTest, ToolCatalog.MicTest);
+            Add("Soi ốc đáy máy: ốc toét đầu hoặc thiếu ốc nghĩa là máy đã được tháo nhiều lần.");
+            Add("Sờ vỏ máy khi chạy tải nặng để phát hiện điểm nóng bất thường.");
         }
         else
         {
-            list.Add("Mở thùng máy quan sát tụ điện trên bo mạch: tụ phồng đầu hoặc rỉ dịch là dấu hiệu bo sắp hỏng.");
-            list.Add("Kiểm tra nguồn (PSU): xem nhãn công suất thật, nghe tiếng rít, ngửi mùi khét.");
-            list.Add("Xem bụi bám và dấu hiệu ẩm mốc, gỉ sét trên bo mạch — chỉ dấu môi trường lưu trữ kém.");
-            list.Add("Kiểm tra tản nhiệt CPU có bị lỏng chốt hoặc lắp lệch không.");
+            Add("Mở thùng máy quan sát tụ điện trên bo mạch: tụ phồng đầu hoặc rỉ dịch là dấu hiệu bo sắp hỏng.");
+            Add("Kiểm tra nguồn (PSU): xem nhãn công suất thật, nghe tiếng rít, ngửi mùi khét.");
+            Add("Xem bụi bám và dấu hiệu ẩm mốc, gỉ sét trên bo mạch — chỉ dấu môi trường lưu trữ kém.");
+            Add("Kiểm tra tản nhiệt CPU có bị lỏng chốt hoặc lắp lệch không.");
         }
 
         if (snapshot.Firmware.Status is IntegrityStatus.Suspicious or IntegrityStatus.Compromised)
         {
-            list.Add("Nạp lại BIOS gốc tải từ trang chủ hãng theo đúng serial máy.");
-            list.Add("Vào BIOS chọn Restore Factory Keys rồi bật Secure Boot, kiểm tra máy còn khởi động được không.");
-            list.Add("Cài lại Windows sạch từ file ISO tải trực tiếp từ Microsoft, không dùng bản ghost của người bán.");
+            Add("Nạp lại BIOS gốc tải từ trang chủ hãng theo đúng serial máy.");
+            Add("Vào BIOS chọn Restore Factory Keys rồi bật Secure Boot, kiểm tra máy còn khởi động được không.");
+            Add("Cài lại Windows sạch từ file ISO tải trực tiếp từ Microsoft, không dùng bản ghost của người bán.");
         }
 
         if (!snapshot.Firmware.RanWithAdminRights)
-            list.Insert(0, "Chạy lại ứng dụng này với quyền Administrator để mở khoá các phép kiểm tra firmware và S.M.A.R.T.");
+            list.Insert(0, new ManualCheckItem(
+                "Chạy lại ứng dụng này với quyền Administrator để mở khoá các phép kiểm tra firmware và S.M.A.R.T."));
     }
 }

@@ -26,6 +26,12 @@ public sealed class SystemSnapshot
     /// <summary>Khả năng nâng cấp RAM và ổ cứng, đọc từ bảng SMBIOS.</summary>
     public UpgradeCapability Upgrade { get; set; } = new();
 
+    /// <summary>
+    /// Kết quả bài kiểm tra GPU (tải nặng + VRAM) nếu người dùng đã chạy.
+    /// Null nghĩa là chưa chạy — số liệu nhiệt GPU khi đó chỉ phản ánh lúc nghỉ.
+    /// </summary>
+    public Diagnostics.GpuTestResult? GpuTest { get; set; }
+
     /// <summary>Kết quả đo cảm biến min/max/avg của phiên chạy.</summary>
     public List<SensorStats> SensorSnapshot { get; } = new();
 

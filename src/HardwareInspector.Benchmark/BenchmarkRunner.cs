@@ -12,7 +12,8 @@ public sealed class BenchmarkRunner
         {
             new CpuStressBenchmark(),
             new MemoryBandwidthBenchmark(),
-            new StorageSpeedBenchmark()
+            new StorageSpeedBenchmark(),
+            new GpuStressBenchmark()
         };
 
     public IReadOnlyList<IBenchmark> Benchmarks => _benchmarks;

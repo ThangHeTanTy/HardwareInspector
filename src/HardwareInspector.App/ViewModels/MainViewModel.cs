@@ -208,8 +208,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public IEnumerable<CrossCheckResult> CrossChecks =>
         _assessment?.Trust.CrossChecks ?? Enumerable.Empty<CrossCheckResult>();
 
-    public IEnumerable<string> ManualChecklist =>
-        _assessment?.Trust.ManualChecklist ?? Enumerable.Empty<string>();
+    public IEnumerable<ManualCheckItem> ManualChecklist =>
+        _assessment?.Trust.ManualChecklist ?? Enumerable.Empty<ManualCheckItem>();
 
     public IEnumerable<Finding> FirmwareFindings =>
         (_assessment?.Firmware.Findings ?? new List<Finding>())
@@ -280,6 +280,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _cts = new CancellationTokenSource();
         BenchmarkResults.Clear();
         _pipeline.SensorMonitor.ResetStatistics();
+        _pipeline.LastGpuTest = null;
 
         Stage = Ui["Status.StressPrep"];
         Progress = 0;
@@ -294,6 +295,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         {
             var results = await _benchmarkRunner.RunAllAsync(progress, _cts.Token);
             foreach (var r in results) BenchmarkResults.Add(r);
+
+            _pipeline.LastGpuTest = _benchmarkRunner.Benchmarks
+                .OfType<GpuStressBenchmark>()
+                .FirstOrDefault()?.LastResult;
 
             Status = Ui["Status.Rescan"];
 
@@ -413,6 +418,20 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 Process.Start(new ProcessStartInfo(lookup.Url) { UseShellExecute = true });
             else
                 Status = Ui["Status.NoWarrantyLink"];
+        }
+        catch (Exception ex)
+        {
+            Status = string.Format(Ui["Msg.LookupFailed"], ex.Message);
+        }
+    }
+
+    /// <summary>Mở trang chính thức của một công cụ kiểm tra trong trình duyệt mặc định.</summary>
+    public void OpenTool(ToolLink tool)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(tool.Url) { UseShellExecute = true });
+            Status = string.Format(Ui["Msg.ToolOpened"], tool.Name, tool.Url);
         }
         catch (Exception ex)
         {

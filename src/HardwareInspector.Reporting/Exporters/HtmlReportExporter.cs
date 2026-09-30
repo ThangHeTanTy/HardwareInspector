@@ -153,9 +153,21 @@ public sealed class HtmlReportExporter : IReportExporter
         // Checklist thủ công
         sb.Append("<section><h2>Việc cần kiểm tra bằng tay</h2>" +
                   "<p class=\"intro\">Những mục dưới đây phần mềm không thay thế được. " +
-                  "Hãy làm đủ trước khi trả tiền.</p><ol class=\"checklist\">");
+                  "Hãy làm đủ trước khi trả tiền. Công cụ gợi ý đều dẫn tới trang chính thức của nhà phát triển — " +
+                  "đừng tải từ trang trung gian.</p><ol class=\"checklist\">");
         foreach (var item in a.Trust.ManualChecklist)
-            sb.Append($"<li>{E(item)}</li>");
+        {
+            sb.Append($"<li>{E(item.Text)}");
+            if (item.HasTools)
+            {
+                sb.Append("<ul class=\"tools\">");
+                foreach (var tool in item.Tools)
+                    sb.Append($"<li><a href=\"{E(tool.Url)}\">{E(tool.Name)}</a> " +
+                              $"<span class=\"cost\">({E(tool.Cost)})</span> — {E(tool.Purpose)}</li>");
+                sb.Append("</ul>");
+            }
+            sb.Append("</li>");
+        }
         sb.Append("</ol></section>");
 
         sb.Append(HtmlTemplate.Foot());

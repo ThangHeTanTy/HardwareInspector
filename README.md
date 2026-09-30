@@ -19,7 +19,7 @@ thời gian đã hoạt động, phần trăm sức khoẻ còn lại, và nhi�
 | Linh kiện | Dữ liệu khai thác |
 |---|---|
 | CPU | Nhân/luồng, xung thiết kế vs xung thực đạt, nhiệt độ, microcode, phát hiện mẫu ES/QS |
-| GPU | VRAM thật (không bị tràn 4 GB như WMI), vBIOS, nhiệt nhân vs điểm nóng, quạt |
+| GPU | VRAM thật (không bị tràn 4 GB như WMI), vBIOS, nhiệt nhân vs điểm nóng, quạt; bài tải có đối chiếu kết quả tính toán, kiểm tra VRAM, lịch sử driver bị reset (TDR) |
 | RAM | Từng thanh: hãng, part number, tốc độ danh định vs thực chạy, cấu hình kênh, ECC |
 | Ổ lưu trữ | S.M.A.R.T. đầy đủ: giờ chạy, sector hỏng, TBW, tuổi thọ NAND, cảm biến va đập |
 | Pin | Chu kỳ sạc, độ chai so với thiết kế, ngày sản xuất, chất liệu |
@@ -51,8 +51,18 @@ thời gian đã hoạt động, phần trăm sức khoẻ còn lại, và nhi�
 **Bài kiểm tra thực hành:**
 
 - Chạy tải nặng CPU/RAM/ổ đĩa rồi tự quét lại — vì mọi vấn đề tản nhiệt chỉ lộ khi máy nóng thật
+- Tải nặng GPU 5 phút bằng compute shader Direct3D 11, tự chọn card rời trên laptop hai GPU.
+  Cứ vài trăm mili giây, kết quả tính lại được so với kết quả chuẩn đến từng bit —
+  card khoẻ không bao giờ lệch. Đo luôn hiệu năng phút cuối so với phút đầu để phát hiện tự hạ xung
+- Kiểm tra VRAM ngay khi card còn nóng: ghi mẫu dữ liệu lên ~80% VRAM riêng, đọc lại so sánh
+  theo kiểu MemTest, nhiều lượt với mẫu gốc và mẫu đảo bit. Lỗi VRAM là bằng chứng cứng, không cần nhìn bằng mắt
 - Kiểm tra màn hình toàn màn hình: 8 bài theo thứ tự có chủ đích (đen → trắng → RGB → xám →
   chuyển sắc), có lưới chia vùng để soi điểm chết
+
+**Checklist kiểm tra tay kèm công cụ chuyên dụng** — mỗi mục phần mềm không làm thay được
+đều gắn đường dẫn tới trang chính thức của công cụ phù hợp (OCCT, FurMark 2, Superposition,
+3DMark, GPU-Z, HWiNFO, Cinebench, Prime95, MemTest86, CrystalDiskInfo/Mark, EIZO Monitor Test,
+TestUFO...), ghi rõ miễn phí hay trả phí và cần nhìn vào đâu trong kết quả.
 
 **Xuất biên bản** HTML một file (in được, đưa người bán xem tại chỗ) hoặc JSON đầy đủ dữ liệu thô.
 
@@ -99,7 +109,7 @@ HardwareInspector/
     │   ├── Analyzers/                 #   một analyzer cho mỗi linh kiện
     │   └── Trust/                     #   SecondHandTrustEngine — đối chiếu chéo
     │
-    ├── HardwareInspector.Benchmark/   # tạo tải để bộc lộ vấn đề nhiệt
+    ├── HardwareInspector.Benchmark/   # tạo tải để bộc lộ vấn đề nhiệt; Gpu/ = compute shader D3D11
     ├── HardwareInspector.Reporting/   # xuất HTML + JSON
     └── HardwareInspector.App/         # WPF, MVVM
         ├── Services/                  #   InspectionPipeline
@@ -133,6 +143,7 @@ báo *sạch*.
 | `LibreHardwareMonitorLib` | Nhiệt độ, xung nhịp, quạt, điện áp, công suất |
 | `System.Management` | Truy vấn WMI |
 | `System.Diagnostics.EventLog` | Đọc nhật ký sự cố hệ thống |
+| `Vortice.Direct3D11`, `Vortice.D3DCompiler` | Compute shader Direct3D 11 cho bài tải GPU và kiểm tra VRAM |
 
 Còn lại đều dùng P/Invoke trực tiếp tới API Windows — SMBIOS, ACPI, biến UEFI, EDID
 đều tự đọc và tự parse.
