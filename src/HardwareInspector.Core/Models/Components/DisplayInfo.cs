@@ -37,6 +37,24 @@ public sealed class DisplayInfo
     public int? MaxRefreshHz { get; set; }
     public bool EdidAvailable { get; set; }
 
+    /// <summary>
+    /// Kiểu tín hiệu vào mà màn hình tự khai trong EDID (byte 20, bit 7).
+    /// False nghĩa là màn nhận tín hiệu analog — tức là màn VGA, bất kể card
+    /// xuất hình báo cổng gì.
+    /// </summary>
+    public bool? EdidDigitalInput { get; set; }
+
+    /// <summary>
+    /// Cổng mà Windows báo, khi nó khác với cổng thật của màn hình.
+    ///
+    /// Windows chỉ biết đầu ra của card đồ hoạ. Màn VGA cắm qua bộ chuyển DisplayPort/HDMI→VGA
+    /// — kể cả cổng VGA trên bo mạch đời mới, vốn là một chip chuyển DP→VGA gắn sẵn —
+    /// sẽ được báo là DisplayPort hoặc HDMI. Null nghĩa là hai nguồn khớp nhau.
+    /// </summary>
+    public DisplayConnection? ReportedConnection { get; set; }
+
+    public bool ViaConverter => ReportedConnection is not null && ReportedConnection != Connection;
+
     // --- Chế độ đang chạy ---
     public int WidthPx { get; set; }
     public int HeightPx { get; set; }
@@ -63,21 +81,30 @@ public sealed class DisplayInfo
             ? NativeWidthPx == WidthPx && NativeHeightPx == HeightPx
             : null;
 
-    public string ConnectionText => Connection switch
+    public string ConnectionText => ViaConverter
+        ? $"{NameOf(Connection)} — qua bộ chuyển {ShortOf(ReportedConnection!.Value)}→{ShortOf(Connection)}"
+        : NameOf(Connection);
+
+    /// <summary>Tên cổng ở dạng ngắn, dùng cho ô chọn màn hình.</summary>
+    public string ConnectionShort => ViaConverter
+        ? $"{ShortOf(Connection)} (qua {ShortOf(ReportedConnection!.Value)})"
+        : ShortOf(Connection);
+
+    private static string NameOf(DisplayConnection connection) => connection switch
     {
         DisplayConnection.Internal => "Tấm nền tích hợp (eDP/LVDS)",
         DisplayConnection.Vga => "VGA (D-Sub)",
         DisplayConnection.Dvi => "DVI",
         DisplayConnection.Hdmi => "HDMI",
-        DisplayConnection.DisplayPort => "DisplayPort",
+        // USB-C/Thunderbolt chạy chế độ DisplayPort Alt Mode nên Windows cũng báo là DisplayPort.
+        DisplayConnection.DisplayPort => "DisplayPort (hoặc USB-C/Thunderbolt)",
         DisplayConnection.UsbC => "USB-C / Thunderbolt",
         DisplayConnection.Wireless => "Không dây (Miracast)",
         DisplayConnection.Other => "Cổng khác",
         _ => "Không xác định"
     };
 
-    /// <summary>Tên cổng ở dạng ngắn, dùng cho ô chọn màn hình.</summary>
-    public string ConnectionShort => Connection switch
+    private static string ShortOf(DisplayConnection connection) => connection switch
     {
         DisplayConnection.Internal => "tích hợp",
         DisplayConnection.Vga => "VGA",

@@ -15,6 +15,8 @@ Phần mềm không chỉ liệt kê thông số. Nó đọc các "đồng hồ"
 
 **Đánh giá từng linh kiện** theo bốn mức — Tốt / Khá / Trung bình / Yếu — kèm điểm 0-100,
 thời gian đã hoạt động, phần trăm sức khoẻ còn lại, và nhiệt độ min/trung bình/max.
+Mỗi linh kiện có mô hình 3D xoay được bằng chuột (mỗi linh kiện giữ góc xoay riêng),
+vành sáng dưới bệ đổi màu theo mức đánh giá.
 
 | Linh kiện | Dữ liệu khai thác |
 |---|---|
@@ -23,7 +25,7 @@ thời gian đã hoạt động, phần trăm sức khoẻ còn lại, và nhi�
 | RAM | Từng thanh: hãng, part number, tốc độ danh định vs thực chạy, cấu hình kênh, ECC |
 | Ổ lưu trữ | S.M.A.R.T. đầy đủ: giờ chạy, sector hỏng, TBW, tuổi thọ NAND, cảm biến va đập |
 | Pin | Chu kỳ sạc, độ chai so với thiết kế, ngày sản xuất, chất liệu |
-| Màn hình | EDID thô: mã tấm nền thật, tuần/năm sản xuất, độ sâu màu, kích thước |
+| Màn hình | EDID thô: mã tấm nền thật, tuần/năm sản xuất, độ sâu màu, kích thước; cổng thật kể cả khi màn VGA đi qua bộ chuyển DP/HDMI→VGA |
 | Bo mạch | Serial hệ thống/bo/vỏ, cảm biến mở vỏ, kênh cấp phép Windows |
 
 **Kiểm tra BIOS đã bị can thiệp chưa** — tám phép kiểm tra ở bốn tầng:

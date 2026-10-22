@@ -55,7 +55,12 @@ public sealed class DisplayAnalyzer : IComponentAnalyzer
 
         var card = new ScoreCard(Kind, title);
 
-        card.Metric("Cổng kết nối", display.ConnectionText)
+        card.Metric("Cổng kết nối", display.ConnectionText,
+                display.ViaConverter
+                    ? $"Windows báo {display.ReportedConnection} vì đó là đầu ra của card đồ hoạ. " +
+                      "EDID của màn khai tín hiệu analog, nên cổng thật là VGA — đi qua adapter rời " +
+                      "hoặc chip chuyển đổi gắn sẵn sau cổng VGA trên bo mạch."
+                    : null)
             .Metric("Card xuất hình", display.AdapterDescription.OrDash())
             .Metric("Vai trò", display.IsPrimary ? "Màn hình chính" : "Màn hình phụ")
             .Metric("Độ phân giải đang chạy", display.Resolution)
