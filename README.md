@@ -16,7 +16,12 @@ Phần mềm không chỉ liệt kê thông số. Nó đọc các "đồng hồ"
 **Đánh giá từng linh kiện** theo bốn mức — Tốt / Khá / Trung bình / Yếu — kèm điểm 0-100,
 thời gian đã hoạt động, phần trăm sức khoẻ còn lại, và nhiệt độ min/trung bình/max.
 Mỗi linh kiện có mô hình 3D xoay được bằng chuột (mỗi linh kiện giữ góc xoay riêng),
-vành sáng dưới bệ đổi màu theo mức đánh giá.
+dựng theo dữ liệu máy thật: kích thước và kiểu chân CPU theo socket (LGA1700, AM4, AM5,
+BGA laptop), card đồ hoạ dài theo số quạt đọc từ cảm biến (chỉnh tay được), số chip VRAM
+theo dung lượng, thanh RAM DIMM/SO-DIMM đúng vị trí khấc DDR4/DDR5, ổ M.2/2,5"/3,5",
+số cell pin theo điện áp, màn rời hay nắp laptop đúng tỉ lệ, bo mạch đúng số khe RAM
+và khe đang cắm. Bộ phận có vấn đề đổi màu cam/đỏ — chip VRAM lỗi, mặt đĩa có sector hỏng,
+cell pin chai — và mô hình tự tách lớp khi chỗ hỏng nằm bên trong vỏ.
 
 | Linh kiện | Dữ liệu khai thác |
 |---|---|

@@ -43,6 +43,11 @@ public partial class MainWindow : Window
             vm.OpenTool(tool);
     }
 
+    private void OnFanCountChosen(object? sender, int count)
+    {
+        if (DataContext is MainViewModel vm) vm.SetGpuFanCount(count);
+    }
+
     /// <summary>Trải phẳng chuỗi InnerException — nguyên nhân thật thường nằm ở tầng sâu nhất.</summary>
     private static string Describe(Exception ex)
     {

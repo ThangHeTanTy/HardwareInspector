@@ -17,6 +17,14 @@ namespace HardwareInspector.App.Views;
 /// chuyển sang xem GPU, lúc quay lại CPU vẫn đứng đúng góc cũ. Linh kiện chưa bị
 /// chạm tới thì tự quay chậm để người xem thấy được mọi mặt.
 ///
+/// Hình dáng lấy từ <see cref="Spec"/> — thông số suy ra từ máy thật (socket CPU, loại RAM,
+/// chuẩn ổ, số quạt card đồ hoạ...). Chưa có thông số thì vẽ mô hình mặc định theo
+/// <see cref="Kind"/>.
+///
+/// Với card đồ hoạ, góc trên phải có bộ chọn số quạt: cảm biến không phải lúc nào
+/// cũng đếm đúng (card ba quạt hay ghép hai quạt chung một bộ điều khiển), nên người
+/// dùng nhìn card thật rồi chỉnh lại được.
+///
 /// Dựng hoàn toàn bằng code thay vì XAML để chỉ có một chỗ khai báo trong MainWindow.
 /// </summary>
 public sealed class ComponentModelView : Border
@@ -28,6 +36,20 @@ public sealed class ComponentModelView : Border
     public static readonly DependencyProperty RatingProperty = DependencyProperty.Register(
         nameof(Rating), typeof(HealthRating), typeof(ComponentModelView),
         new PropertyMetadata(HealthRating.Unknown, (d, _) => ((ComponentModelView)d).Rebuild()));
+
+    public static readonly DependencyProperty SpecProperty = DependencyProperty.Register(
+        nameof(Spec), typeof(ComponentModelSpec), typeof(ComponentModelView),
+        new PropertyMetadata(null, (d, _) => ((ComponentModelView)d).Rebuild()));
+
+    /// <summary>Thông số dựng mô hình. Bị bỏ qua nếu không cùng loại với <see cref="Kind"/>.</summary>
+    public ComponentModelSpec? Spec
+    {
+        get => (ComponentModelSpec?)GetValue(SpecProperty);
+        set => SetValue(SpecProperty, value);
+    }
+
+    /// <summary>Người dùng chọn số quạt GPU. 0 nghĩa là quay về giá trị tự nhận diện.</summary>
+    public event EventHandler<int>? FanCountChosen;
 
     public ComponentKind Kind
     {
@@ -51,7 +73,7 @@ public sealed class ComponentModelView : Border
     }
 
     private static readonly Dictionary<ComponentKind, ViewState> States = new();
-    private static readonly Dictionary<(ComponentKind, HealthRating), Model3DGroup> Cache = new();
+    private static readonly Dictionary<(ComponentModelSpec, HealthRating), Model3DGroup> Cache = new();
 
     private const double AutoSpinDegreesPerSecond = 18;
 
@@ -65,6 +87,8 @@ public sealed class ComponentModelView : Border
     private readonly AxisAngleRotation3D _pitch = new(new Vector3D(1, 0, 0), 0);
     private readonly ScaleTransform3D _scale = new(1, 1, 1);
     private readonly TextBlock _hint;
+    private readonly StackPanel _fanBar;
+    private readonly TextBlock _fanLabel;
 
     private Point _lastMouse;
     private bool _dragging;
@@ -107,9 +131,40 @@ public sealed class ComponentModelView : Border
             IsHitTestVisible = false
         };
 
+        _fanLabel = new TextBlock
+        {
+            Foreground = new SolidColorBrush(Color.FromRgb(0xC9, 0xCE, 0xD6)),
+            FontSize = 11,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 6, 0)
+        };
+        _fanBar = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 8, 10, 0),
+            Visibility = Visibility.Collapsed
+        };
+        _fanBar.Children.Add(_fanLabel);
+        foreach (var count in new[] { 0, 1, 2, 3 })
+        {
+            var button = new Button
+            {
+                Tag = count,
+                Padding = new Thickness(8, 2, 8, 2),
+                Margin = new Thickness(2, 0, 0, 0),
+                FontSize = 11,
+                Cursor = Cursors.Hand
+            };
+            button.Click += (_, _) => FanCountChosen?.Invoke(this, (int)button.Tag);
+            _fanBar.Children.Add(button);
+        }
+
         var root = new Grid();
         root.Children.Add(viewport);
         root.Children.Add(_hint);
+        root.Children.Add(_fanBar);
         Child = root;
 
         UpdateHint();
@@ -133,7 +188,46 @@ public sealed class ComponentModelView : Border
 
     private ViewState State => States.TryGetValue(Kind, out var s) ? s : States[Kind] = new ViewState();
 
-    private void OnLanguageChanged(object? sender, EventArgs e) => UpdateHint();
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        UpdateHint();
+        UpdateFanBar(EffectiveSpec);
+    }
+
+    /// <summary>Thông số dùng để vẽ: lấy Spec nếu khớp loại linh kiện, không thì mặc định.</summary>
+    private ComponentModelSpec EffectiveSpec =>
+        Spec is { } spec && spec.Kind == Kind ? spec : new ComponentModelSpec(Kind);
+
+    private void UpdateFanBar(ComponentModelSpec spec)
+    {
+        var show = spec.Kind == ComponentKind.Gpu && spec.GpuForm != GpuForm.Integrated;
+        _fanBar.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        if (!show) return;
+
+        var source = spec.FanSource switch
+        {
+            FanCountSource.Sensor => Loc.S("theo cảm biến", "from sensors"),
+            FanCountSource.User => Loc.S("bạn đã chọn", "set by you"),
+            _ => Loc.S("chưa đọc được, đang để mặc định", "not detected, using default")
+        };
+        _fanLabel.Text = Loc.S("Số quạt: {0} ({1})", "Fans: {0} ({1})", spec.FanCount, source);
+        _fanLabel.ToolTip = Loc.S(
+            "Card ba quạt thường chỉ báo hai cảm biến vì hai quạt dùng chung một bộ điều khiển. " +
+            "Nhìn card thật rồi bấm đúng số quạt; ứng dụng sẽ nhớ cho card này.",
+            "Three-fan cards often report only two sensors because two fans share one controller. " +
+            "Look at the actual card and pick the right count; the app remembers it for this card.");
+
+        var max = spec.GpuForm == GpuForm.LaptopDiscrete ? 2 : 3;
+        foreach (var button in _fanBar.Children.OfType<Button>())
+        {
+            var count = (int)button.Tag;
+            button.Content = count == 0 ? Loc.S("Tự động", "Auto") : count.ToString();
+            button.Visibility = count <= max ? Visibility.Visible : Visibility.Collapsed;
+            button.FontWeight = (count == 0 && spec.FanSource != FanCountSource.User) ||
+                                (count == spec.FanCount && spec.FanSource == FanCountSource.User)
+                ? FontWeights.Bold : FontWeights.Normal;
+        }
+    }
 
     private void UpdateHint() =>
         _hint.Text = Loc.S("Kéo để xoay · cuộn để phóng to · nhấp đúp để đặt lại",
@@ -143,19 +237,21 @@ public sealed class ComponentModelView : Border
     {
         if (!IsLoaded) return;
 
-        _content.Content = GetModel(Kind, Rating);
+        var spec = EffectiveSpec;
+        _content.Content = GetModel(spec, Rating);
+        UpdateFanBar(spec);
         ApplyState();
 
         if (State.Touched) StopSpin();
         else StartSpin();
     }
 
-    private static Model3DGroup GetModel(ComponentKind kind, HealthRating rating)
+    private static Model3DGroup GetModel(ComponentModelSpec spec, HealthRating rating)
     {
-        if (Cache.TryGetValue((kind, rating), out var cached)) return cached;
+        if (Cache.TryGetValue((spec, rating), out var cached)) return cached;
 
         var group = new Model3DGroup();
-        foreach (var surface in ComponentModels.Build(kind))
+        foreach (var surface in ComponentModels.Build(spec))
         {
             var mesh = new MeshGeometry3D();
             foreach (var p in surface.Positions) mesh.Positions.Add(new Point3D(p.X, p.Y, p.Z));
@@ -163,15 +259,15 @@ public sealed class ComponentModelView : Border
             foreach (var i in surface.Indices) mesh.TriangleIndices.Add(i);
             mesh.Freeze();
 
-            var spec = ComponentModels.Materials[surface.Material];
-            var hex = surface.Material == ComponentModels.RatingMaterial ? rating.ToHexColor() : spec.Hex;
-            var model = new GeometryModel3D(mesh, CreateMaterial(hex, spec));
+            var material = ComponentModels.Materials[surface.Material];
+            var hex = surface.Material == ComponentModels.RatingMaterial ? rating.ToHexColor() : material.Hex;
+            var model = new GeometryModel3D(mesh, CreateMaterial(hex, material));
             model.Freeze();
             group.Children.Add(model);
         }
 
         group.Freeze();
-        Cache[(kind, rating)] = group;
+        Cache[(spec, rating)] = group;
         return group;
     }
 
