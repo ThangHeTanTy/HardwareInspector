@@ -165,6 +165,9 @@ public sealed class DisplayCollector : IInfoCollector
     /// <summary>
     /// WmiMonitorConnectionParams cho biết công nghệ xuất hình của từng màn.
     /// Đây là cách duy nhất phân biệt được HDMI với DisplayPort từ phần mềm.
+    ///
+    /// Lưu ý: giá trị này mô tả đầu ra của card đồ hoạ, không phải đầu vào của màn hình.
+    /// Hai thứ lệch nhau mỗi khi có bộ chuyển đổi ở giữa — xem <see cref="ResolveConnection"/>.
     /// </summary>
     private static Dictionary<string, DisplayConnection> ReadConnectionTypes()
     {
@@ -193,21 +196,40 @@ public sealed class DisplayCollector : IInfoCollector
         6 => DisplayConnection.Internal,          // LVDS
         8 => DisplayConnection.Other,
         9 => DisplayConnection.Other,             // SDI
-        10 => DisplayConnection.DisplayPort,      // external
+        10 => DisplayConnection.DisplayPort,      // external — gồm cả USB-C DP Alt Mode
         11 => DisplayConnection.Internal,         // embedded DisplayPort
-        12 => DisplayConnection.UsbC,             // UDI external
-        13 => DisplayConnection.Internal,
+        12 => DisplayConnection.Other,            // UDI external (chuẩn Unified Display Interface, không phải USB-C)
+        13 => DisplayConnection.Internal,         // UDI embedded
         15 => DisplayConnection.Wireless,         // Miracast
+        16 or 17 => DisplayConnection.Other,      // indirect: dock USB DisplayLink, màn ảo
         -1 => DisplayConnection.Other,
         int.MinValue or 0x80000000 => DisplayConnection.Internal,
         _ => DisplayConnection.Unknown
     };
 
+    /// <summary>
+    /// Ghép hai nguồn: cổng mà card đồ hoạ báo, và kiểu tín hiệu mà màn hình tự khai trong EDID.
+    ///
+    /// Card đời mới hầu như không còn xuất VGA trực tiếp. Màn VGA khi đó chạy qua bộ chuyển
+    /// DisplayPort/HDMI→VGA — có thể là adapter rời, hoặc chip chuyển đổi gắn sẵn sau cổng VGA
+    /// trên bo mạch (phổ biến trên bo Intel từ thế hệ 6 trở đi). Windows chỉ thấy đầu ra
+    /// DisplayPort/HDMI của card nên báo sai cổng. EDID của màn thì luôn nói thật: màn VGA
+    /// khai mình nhận tín hiệu analog, nên ưu tiên EDID và ghi lại cổng Windows báo để hiển thị.
+    /// </summary>
     private static DisplayConnection ResolveConnection(
         Dictionary<string, DisplayConnection> map, string instancePath, DisplayInfo display)
     {
-        if (map.TryGetValue(instancePath, out var conn) && conn != DisplayConnection.Unknown)
-            return conn;
+        map.TryGetValue(instancePath, out var reported);
+
+        if (display.EdidDigitalInput == false && reported != DisplayConnection.Internal)
+        {
+            if (reported is not (DisplayConnection.Unknown or DisplayConnection.Vga))
+                display.ReportedConnection = reported;
+            return DisplayConnection.Vga;
+        }
+
+        if (reported != DisplayConnection.Unknown)
+            return reported;
 
         // Không tra được thì suy đoán: mã hãng tấm nền laptop khác hẳn hãng màn hình rời.
         var laptopPanelVendors = new[] { "AUO", "LGD", "BOE", "CMN", "SDC", "IVO", "CSO", "SHP" };

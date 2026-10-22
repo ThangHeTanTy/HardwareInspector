@@ -29,11 +29,20 @@ public static class EdidParser
         if (hCm > 0 && vCm > 0)
             target.DiagonalInches = (int)Math.Round(Math.Sqrt(hCm * hCm + vCm * vCm) / 2.54);
 
-        var bitDepthCode = (edid[20] >> 4) & 0x07;
-        target.BitsPerColor = bitDepthCode switch
+        // Byte 20: bit 7 cho biết màn nhận tín hiệu số hay analog. Các bit còn lại mang
+        // nghĩa khác nhau cho hai loại — với màn analog chúng là mức điện áp tín hiệu,
+        // không phải độ sâu màu, nên chỉ đọc độ sâu màu khi màn là loại số.
+        var digital = (edid[20] & 0x80) != 0;
+        target.EdidDigitalInput = digital;
+
+        if (digital)
         {
-            1 => 6, 2 => 8, 3 => 10, 4 => 12, 5 => 14, 6 => 16, _ => null
-        };
+            var bitDepthCode = (edid[20] >> 4) & 0x07;
+            target.BitsPerColor = bitDepthCode switch
+            {
+                1 => 6, 2 => 8, 3 => 10, 4 => 12, 5 => 14, 6 => 16, _ => null
+            };
+        }
 
         ParseDescriptors(edid, target);
         ParsePreferredTiming(edid, target);

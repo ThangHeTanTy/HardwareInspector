@@ -141,6 +141,11 @@ EDID chứa mã tấm nền thật và tuần/năm sản xuất. Tấm nền s�
 ngày phát hành BIOS hai năm trở lên nghĩa là **màn hình đã được thay**.
 Việc thay màn tự nó không xấu, nhưng nó cho biết máy từng bị va đập hoặc hỏng.
 
+EDID còn cho biết màn nhận tín hiệu số hay analog. Điều này quan trọng vì Windows chỉ biết
+đầu ra của card đồ hoạ: màn VGA cắm qua bộ chuyển DisplayPort/HDMI→VGA — kể cả cổng VGA trên
+bo mạch đời mới, vốn là chip chuyển DP→VGA gắn sẵn — bị Windows báo là DisplayPort.
+Công cụ ưu tiên EDID và ghi rõ "VGA — qua bộ chuyển DisplayPort→VGA".
+
 Phần còn lại — điểm chết, điểm sáng, hở sáng, ám màu, lưu ảnh — không có phần mềm nào
 phát hiện được. Bắt buộc phải nhìn bằng mắt, trong phòng tối, với các nền đơn sắc.
 Đó là lý do công cụ này có sẵn bài kiểm tra toàn màn hình.

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using HardwareInspector.App.Rendering;
 using HardwareInspector.App.Services;
 using HardwareInspector.Analysis;
 using HardwareInspector.Benchmark;
@@ -20,6 +21,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private readonly InspectionPipeline _pipeline = new();
     private readonly MachineAssessmentService _assessmentService = new();
     private readonly BenchmarkRunner _benchmarkRunner = new();
+    private readonly GpuFanOverrideStore _fanOverrides = new();
     private CancellationTokenSource? _cts;
 
     private SystemSnapshot? _snapshot;
@@ -125,6 +127,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(CrossChecks));
             OnPropertyChanged(nameof(ManualChecklist));
             OnPropertyChanged(nameof(FirmwareFindings));
+            OnPropertyChanged(nameof(SelectedModelSpec));
         }
     }
 
@@ -133,8 +136,26 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         get => _selectedComponent;
         set
         {
-            if (Set(ref _selectedComponent, value)) CopyComponentCommand.RaiseCanExecuteChanged();
+            if (!Set(ref _selectedComponent, value)) return;
+            CopyComponentCommand.RaiseCanExecuteChanged();
+            OnPropertyChanged(nameof(SelectedModelSpec));
         }
+    }
+
+    /// <summary>
+    /// Thông số mô hình 3D của linh kiện đang chọn, suy ra từ dữ liệu máy thật.
+    /// Tính lại mỗi lần đọc — rẻ, và luôn khớp với snapshot cùng lựa chọn số quạt mới nhất.
+    /// </summary>
+    public ComponentModelSpec? SelectedModelSpec =>
+        _snapshot is { } snapshot && SelectedComponent is { } component
+            ? ComponentModelSpecFactory.Create(snapshot, component, _fanOverrides.Get(snapshot.PrimaryGpu?.Name))
+            : null;
+
+    /// <summary>Người dùng chỉnh số quạt card đồ hoạ trên mô hình. 0 là quay về tự nhận diện.</summary>
+    public void SetGpuFanCount(int count)
+    {
+        _fanOverrides.Set(_snapshot?.PrimaryGpu?.Name, count);
+        OnPropertyChanged(nameof(SelectedModelSpec));
     }
 
     /// <summary>Màn hình mà bài kiểm tra màu sẽ chạy lên.</summary>
