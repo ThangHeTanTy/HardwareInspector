@@ -48,6 +48,31 @@ public sealed class ComponentModelView : Border
         set => SetValue(SpecProperty, value);
     }
 
+    public static readonly DependencyProperty AssemblyProperty = DependencyProperty.Register(
+        nameof(Assembly), typeof(AssemblySpec), typeof(ComponentModelView),
+        new PropertyMetadata(null, (d, _) => ((ComponentModelView)d).Rebuild()));
+
+    /// <summary>Có giá trị thì vẽ cảnh lắp ráp tổng thể thay vì một linh kiện.</summary>
+    public AssemblySpec? Assembly
+    {
+        get => (AssemblySpec?)GetValue(AssemblyProperty);
+        set => SetValue(AssemblyProperty, value);
+    }
+
+    public static readonly DependencyProperty StateKeyProperty = DependencyProperty.Register(
+        nameof(StateKey), typeof(string), typeof(ComponentModelView),
+        new PropertyMetadata(null, (d, _) => ((ComponentModelView)d).Rebuild()));
+
+    /// <summary>
+    /// Khoá nhớ góc xoay. Mặc định theo loại linh kiện; mô hình của từng ổ, từng màn hình
+    /// đặt khoá riêng ("Storage#1") để xoay độc lập với nhau.
+    /// </summary>
+    public string? StateKey
+    {
+        get => (string?)GetValue(StateKeyProperty);
+        set => SetValue(StateKeyProperty, value);
+    }
+
     /// <summary>Người dùng chọn số quạt GPU. 0 nghĩa là quay về giá trị tự nhận diện.</summary>
     public event EventHandler<int>? FanCountChosen;
 
@@ -72,7 +97,8 @@ public sealed class ComponentModelView : Border
         public bool Touched;
     }
 
-    private static readonly Dictionary<ComponentKind, ViewState> States = new();
+    private static readonly Dictionary<string, ViewState> States = new();
+    private static (AssemblySpec Spec, HealthRating Rating, Model3DGroup Model)? _assemblyCache;
     private static readonly Dictionary<(ComponentModelSpec, HealthRating), Model3DGroup> Cache = new();
 
     private const double AutoSpinDegreesPerSecond = 18;
@@ -186,7 +212,9 @@ public sealed class ComponentModelView : Border
         _camera.FieldOfView = horizontal * 180 / Math.PI;
     }
 
-    private ViewState State => States.TryGetValue(Kind, out var s) ? s : States[Kind] = new ViewState();
+    private string Key => StateKey ?? (Assembly is not null ? "assembly" : Kind.ToString());
+
+    private ViewState State => States.TryGetValue(Key, out var s) ? s : States[Key] = new ViewState();
 
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
@@ -237,9 +265,17 @@ public sealed class ComponentModelView : Border
     {
         if (!IsLoaded) return;
 
-        var spec = EffectiveSpec;
-        _content.Content = GetModel(spec, Rating);
-        UpdateFanBar(spec);
+        if (Assembly is { } assembly)
+        {
+            _content.Content = GetAssembly(assembly, Rating);
+            _fanBar.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            var spec = EffectiveSpec;
+            _content.Content = GetModel(spec, Rating);
+            UpdateFanBar(spec);
+        }
         ApplyState();
 
         if (State.Touched) StopSpin();
@@ -249,9 +285,24 @@ public sealed class ComponentModelView : Border
     private static Model3DGroup GetModel(ComponentModelSpec spec, HealthRating rating)
     {
         if (Cache.TryGetValue((spec, rating), out var cached)) return cached;
+        var group = ToModel(ComponentModels.Build(spec), rating);
+        Cache[(spec, rating)] = group;
+        return group;
+    }
 
+    /// <summary>Cảnh tổng thể chỉ có một, nên chỉ nhớ bản dựng gần nhất.</summary>
+    private static Model3DGroup GetAssembly(AssemblySpec spec, HealthRating rating)
+    {
+        if (_assemblyCache is { } c && ReferenceEquals(c.Spec, spec) && c.Rating == rating) return c.Model;
+        var group = ToModel(ComponentModels.BuildAssembly(spec), rating);
+        _assemblyCache = (spec, rating, group);
+        return group;
+    }
+
+    private static Model3DGroup ToModel(IReadOnlyList<Surface> surfaces, HealthRating rating)
+    {
         var group = new Model3DGroup();
-        foreach (var surface in ComponentModels.Build(spec))
+        foreach (var surface in surfaces)
         {
             var mesh = new MeshGeometry3D();
             foreach (var p in surface.Positions) mesh.Positions.Add(new Point3D(p.X, p.Y, p.Z));
@@ -267,7 +318,6 @@ public sealed class ComponentModelView : Border
         }
 
         group.Freeze();
-        Cache[(spec, rating)] = group;
         return group;
     }
 
@@ -306,7 +356,7 @@ public sealed class ComponentModelView : Border
 
         if (e.ClickCount == 2)
         {
-            States[Kind] = new ViewState();
+            States[Key] = new ViewState();
             ApplyState();
             StartSpin();
             e.Handled = true;

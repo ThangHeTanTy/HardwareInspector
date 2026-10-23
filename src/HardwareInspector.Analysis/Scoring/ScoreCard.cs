@@ -19,10 +19,14 @@ public sealed class ScoreCard
         _assessment = new ComponentAssessment { Kind = kind, DisplayName = displayName };
     }
 
-    public ScoreCard Metric(string label, string? value, string? note = null, Severity severity = Severity.Info)
+    public ScoreCard Metric(string label, string? value, string? note = null, Severity severity = Severity.Info,
+        string? anchor = null)
     {
         // Chấp nhận null và quy về gạch ngang thay vì để null lọt xuống giao diện.
-        _assessment.Metrics.Add(new MetricLine(label, string.IsNullOrWhiteSpace(value) ? "—" : value, note, severity));
+        _assessment.Metrics.Add(new MetricLine(label, string.IsNullOrWhiteSpace(value) ? "—" : value, note, severity)
+        {
+            Anchor = anchor
+        });
         return this;
     }
 

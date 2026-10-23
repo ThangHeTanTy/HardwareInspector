@@ -16,12 +16,19 @@ using HardwareInspector.Reporting.Exporters;
 
 namespace HardwareInspector.App.ViewModels;
 
+/// <summary>
+/// Một dòng trong bảng thông số linh kiện. Dòng mở đầu phần thông tin của ổ thứ hai,
+/// màn thứ hai... mang theo mô hình 3D của chính thiết bị đó, đặt ngay cạnh dòng.
+/// </summary>
+public sealed record MetricRowView(MetricLine Metric, ComponentModelSpec? Spec, string? StateKey);
+
 public sealed class MainViewModel : ObservableObject, IDisposable
 {
     private readonly InspectionPipeline _pipeline = new();
     private readonly MachineAssessmentService _assessmentService = new();
     private readonly BenchmarkRunner _benchmarkRunner = new();
     private readonly GpuFanOverrideStore _fanOverrides = new();
+    private AssemblySpec? _overviewModel;
     private CancellationTokenSource? _cts;
 
     private SystemSnapshot? _snapshot;
@@ -114,6 +121,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         private set
         {
             Set(ref _assessment, value);
+            RefreshOverviewModel();
             OnPropertyChanged(nameof(HasResult));
             OnPropertyChanged(nameof(OverallScoreText));
             OnPropertyChanged(nameof(OverallRatingText));
@@ -128,7 +136,25 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(ManualChecklist));
             OnPropertyChanged(nameof(FirmwareFindings));
             OnPropertyChanged(nameof(SelectedModelSpec));
+            OnPropertyChanged(nameof(SelectedMetricRows));
         }
+    }
+
+    /// <summary>Cảnh lắp ráp tổng thể ở phần kết luận. Dựng lại khi có kết quả mới hoặc đổi số quạt.</summary>
+    public AssemblySpec? OverviewModel
+    {
+        get => _overviewModel;
+        private set => Set(ref _overviewModel, value);
+    }
+
+    public HealthRating OverallRating => _assessment?.OverallRating ?? HealthRating.Unknown;
+
+    private void RefreshOverviewModel()
+    {
+        OverviewModel = _snapshot is { } snapshot && _assessment is { } assessment
+            ? ComponentModelSpecFactory.CreateAssembly(snapshot, assessment, _fanOverrides.Get(snapshot.PrimaryGpu?.Name))
+            : null;
+        OnPropertyChanged(nameof(OverallRating));
     }
 
     public ComponentAssessment? SelectedComponent
@@ -139,6 +165,29 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             if (!Set(ref _selectedComponent, value)) return;
             CopyComponentCommand.RaiseCanExecuteChanged();
             OnPropertyChanged(nameof(SelectedModelSpec));
+            OnPropertyChanged(nameof(SelectedMetricRows));
+        }
+    }
+
+    /// <summary>
+    /// Thông số của linh kiện đang chọn, mỗi dòng kèm mô hình 3D nếu đó là dòng mở đầu
+    /// một thiết bị khác thiết bị đã vẽ ở góc trên (ổ thứ hai trở đi, màn phụ).
+    /// </summary>
+    public IReadOnlyList<MetricRowView> SelectedMetricRows
+    {
+        get
+        {
+            if (SelectedComponent is not { } c) return Array.Empty<MetricRowView>();
+            var snapshot = _snapshot;
+            var header = snapshot is null ? null : ComponentModelSpecFactory.HeaderAnchor(snapshot, c.Kind);
+
+            return c.Metrics.Select(m =>
+            {
+                var spec = snapshot is not null && m.Anchor is { } anchor && anchor != header
+                    ? ComponentModelSpecFactory.CreateForAnchor(snapshot, anchor)
+                    : null;
+                return new MetricRowView(m, spec, spec is null ? null : $"{c.Kind}#{m.Anchor}");
+            }).ToList();
         }
     }
 
@@ -156,6 +205,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         _fanOverrides.Set(_snapshot?.PrimaryGpu?.Name, count);
         OnPropertyChanged(nameof(SelectedModelSpec));
+        RefreshOverviewModel();
     }
 
     /// <summary>Màn hình mà bài kiểm tra màu sẽ chạy lên.</summary>

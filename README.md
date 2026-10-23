@@ -22,6 +22,12 @@ theo dung lượng, thanh RAM DIMM/SO-DIMM đúng vị trí khấc DDR4/DDR5, �
 số cell pin theo điện áp, màn rời hay nắp laptop đúng tỉ lệ, bo mạch đúng số khe RAM
 và khe đang cắm. Bộ phận có vấn đề đổi màu cam/đỏ — chip VRAM lỗi, mặt đĩa có sector hỏng,
 cell pin chai — và mô hình tự tách lớp khi chỗ hỏng nằm bên trong vỏ.
+Bo mạch vẽ thêm cổng mặt sau/mặt bên (USB, LAN, HDMI/DP/VGA, jack âm thanh, PS/2) đọc từ
+bảng SMBIOS Type 8, cùng cổng SATA, header quạt và header USB trên bo. Máy có nhiều ổ hoặc
+nhiều màn thì mỗi thiết bị có mô hình riêng, đặt ngay cạnh dòng thông tin của thiết bị đó.
+Phần kết luận có cảnh lắp ráp tổng thể: CPU trong socket, RAM trong khe, card đồ hoạ trong
+khe PCIe, ổ M.2 trong khe M.2, ổ SATA nối cáp về bo, màn hình nối cáp về cổng xuất hình;
+cột mốc trên mỗi linh kiện tô màu theo mức đánh giá của nó.
 
 | Linh kiện | Dữ liệu khai thác |
 |---|---|

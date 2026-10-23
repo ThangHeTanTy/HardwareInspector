@@ -30,6 +30,41 @@ public enum ExpansionSlotKind
     Legacy
 }
 
+/// <summary>Loại cổng / đầu cắm khai trong SMBIOS Type 8.</summary>
+public enum PortKind
+{
+    Other,
+    UsbA,
+    UsbC,
+    Lan,
+    Hdmi,
+    DisplayPort,
+    Vga,
+    Dvi,
+    Audio,
+    Ps2,
+    Serial,
+    Sata,
+    FanHeader,
+    UsbHeader
+}
+
+/// <summary>
+/// Một cổng kết nối mà bo mạch tự khai báo (SMBIOS Type 8).
+/// Cổng ngoài là các cổng ở mặt sau/mặt bên máy; cổng trong là đầu cắm trên bo
+/// như SATA, quạt, header USB.
+/// </summary>
+public sealed class PortConnectorState
+{
+    public string InternalDesignator { get; set; } = string.Empty;
+    public string ExternalDesignator { get; set; } = string.Empty;
+    public PortKind Kind { get; set; }
+    public bool IsExternal { get; set; }
+
+    public string Designator =>
+        !string.IsNullOrWhiteSpace(ExternalDesignator) ? ExternalDesignator : InternalDesignator;
+}
+
 public sealed class ExpansionSlotState
 {
     public string Designation { get; set; } = string.Empty;
@@ -123,6 +158,9 @@ public sealed class UpgradeCapability
 
     // --- Khe mở rộng ---
     public List<ExpansionSlotState> ExpansionSlots { get; } = new();
+
+    // --- Cổng kết nối (SMBIOS Type 8) ---
+    public List<PortConnectorState> Ports { get; } = new();
 
     public IEnumerable<ExpansionSlotState> SsdSlots =>
         ExpansionSlots.Where(s => s.AcceptsSsd);

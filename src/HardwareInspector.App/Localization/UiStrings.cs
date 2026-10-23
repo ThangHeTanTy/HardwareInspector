@@ -65,6 +65,9 @@ public sealed class UiStrings : INotifyPropertyChanged
         // --- Thẻ kết luận ---
         ["Verdict.Trust"] = new("MỨC TIN CẬY KHI MUA LẠI", "SECOND-HAND TRUST LEVEL"),
         ["Verdict.Firmware"] = new("TÌNH TRẠNG BIOS", "BIOS STATUS"),
+        ["Verdict.Overview.Tip"] = new(
+            "Mô hình tổng thể các linh kiện đọc được và cách chúng nối với nhau. Màu cột mốc trên mỗi linh kiện là mức đánh giá của linh kiện đó.",
+            "Overview of every detected component and how they connect. The marker colour on each part is that part's rating."),
 
         // --- Tên các thẻ ---
         ["Tab.Components"] = new("Linh kiện", "Components"),

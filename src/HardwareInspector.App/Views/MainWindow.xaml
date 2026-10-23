@@ -116,6 +116,7 @@
           <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="*" />
           <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
         <!-- Điểm tổng -->
@@ -151,6 +152,13 @@
                      Margin="0,2,0,0"
                      Foreground="{Binding FirmwareColor, Converter={StaticResource HexToBrush}}" />
         </StackPanel>
+
+        <!-- Cảnh lắp ráp tổng thể: mọi linh kiện đọc được, đặt đúng chỗ và nối với nhau.
+             Cột mốc trên mỗi linh kiện tô màu theo mức đánh giá của linh kiện đó. -->
+        <views:ComponentModelView Grid.Column="3" Width="340" Height="200" Margin="18,0,0,0"
+                                  VerticalAlignment="Center"
+                                  Assembly="{Binding OverviewModel}" Rating="{Binding OverallRating}"
+                                  ToolTip="{Binding [Verdict.Overview.Tip], Source={StaticResource Ui}}" />
       </Grid>
     </Border>
 
@@ -230,61 +238,83 @@
             <ScrollViewer>
               <StackPanel DataContext="{Binding SelectedComponent}">
 
-                <!-- Tiêu đề + nút sao chép toàn bộ -->
-                <DockPanel LastChildFill="True">
-                  <Button DockPanel.Dock="Right" Content="{Binding [Btn.CopyAll], Source={StaticResource Ui}}" Margin="12,0,0,0"
-                          VerticalAlignment="Top"
-                          Command="{Binding DataContext.CopyComponentCommand,
-                                    RelativeSource={RelativeSource AncestorType=Window}}"
-                          ToolTip="{Binding [Btn.CopyAll.Tip], Source={StaticResource Ui}}" />
-                  <TextBox Text="{Binding DisplayName, Mode=OneWay}"
-                           Style="{StaticResource SelectableTitle}" />
-                </DockPanel>
+                <!-- Đầu trang chi tiết: thông tin bên trái, mô hình 3D ở góc trên bên phải.
+                     Mô hình dựng theo dữ liệu máy thật: kéo để xoay, mỗi linh kiện giữ góc xoay
+                     riêng. Bộ phận có vấn đề đổi màu cam/đỏ; vành dưới bệ theo mức đánh giá. -->
+                <Grid Margin="0,0,0,16">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
 
-                <TextBox Text="{Binding Headline, Mode=OneWay}"
-                         Style="{StaticResource SelectableDim}" Margin="0,4,0,4" />
+                  <StackPanel Grid.Column="0" VerticalAlignment="Top">
+                    <!-- Tiêu đề + nút sao chép toàn bộ -->
+                    <DockPanel LastChildFill="True">
+                      <Button DockPanel.Dock="Right" Content="{Binding [Btn.CopyAll], Source={StaticResource Ui}}" Margin="12,0,0,0"
+                              VerticalAlignment="Top"
+                              Command="{Binding DataContext.CopyComponentCommand,
+                                        RelativeSource={RelativeSource AncestorType=Window}}"
+                              ToolTip="{Binding [Btn.CopyAll.Tip], Source={StaticResource Ui}}" />
+                      <TextBox Text="{Binding DisplayName, Mode=OneWay}"
+                               Style="{StaticResource SelectableTitle}" />
+                    </DockPanel>
 
-                <StackPanel Orientation="Horizontal" Margin="0,8,0,16">
-                  <Border CornerRadius="999" Padding="10,3" Margin="0,0,8,0" Background="#1E222B">
-                    <TextBlock Foreground="{Binding Rating, Converter={StaticResource RatingToBrush}}"
-                               FontWeight="SemiBold"
-                               Text="{Binding Rating, Converter={StaticResource RatingToText}}" />
-                  </Border>
-                  <Border CornerRadius="999" Padding="10,3" Background="#1E222B">
-                    <TextBlock>
-                      <Run Text="{Binding [Detail.Score], Source={StaticResource Ui}, Mode=OneWay}" Foreground="#9AA0AA" /><Run Text="{Binding Score, Mode=OneWay}" /><Run Text="/100" Foreground="#9AA0AA" />
-                    </TextBlock>
-                  </Border>
-                </StackPanel>
+                    <TextBox Text="{Binding Headline, Mode=OneWay}"
+                             Style="{StaticResource SelectableDim}" Margin="0,4,0,4" />
 
-                <!-- Mô hình 3D dựng theo dữ liệu máy thật: kéo để xoay, mỗi linh kiện giữ góc
-                     xoay riêng. Bộ phận có vấn đề đổi màu cam/đỏ; vành dưới bệ theo mức đánh giá. -->
-                <views:ComponentModelView Kind="{Binding Kind}" Rating="{Binding Rating}"
-                                          Spec="{Binding DataContext.SelectedModelSpec,
-                                                 RelativeSource={RelativeSource AncestorType=Window}}"
-                                          FanCountChosen="OnFanCountChosen"
-                                          Height="250" Margin="0,0,0,18" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                      <Border CornerRadius="999" Padding="10,3" Margin="0,0,8,0" Background="#1E222B">
+                        <TextBlock Foreground="{Binding Rating, Converter={StaticResource RatingToBrush}}"
+                                   FontWeight="SemiBold"
+                                   Text="{Binding Rating, Converter={StaticResource RatingToText}}" />
+                      </Border>
+                      <Border CornerRadius="999" Padding="10,3" Background="#1E222B">
+                        <TextBlock>
+                          <Run Text="{Binding [Detail.Score], Source={StaticResource Ui}, Mode=OneWay}" Foreground="#9AA0AA" /><Run Text="{Binding Score, Mode=OneWay}" /><Run Text="/100" Foreground="#9AA0AA" />
+                        </TextBlock>
+                      </Border>
+                    </StackPanel>
+                  </StackPanel>
+
+                  <views:ComponentModelView Grid.Column="1" Width="360" Height="230" Margin="16,0,0,0"
+                                            VerticalAlignment="Top"
+                                            Kind="{Binding Kind}" Rating="{Binding Rating}"
+                                            Spec="{Binding DataContext.SelectedModelSpec,
+                                                   RelativeSource={RelativeSource AncestorType=Window}}"
+                                            FanCountChosen="OnFanCountChosen" />
+                </Grid>
 
                 <!-- Thông số: nhãn và giá trị đều bôi đen được -->
                 <TextBlock Text="{Binding [Detail.Specs], Source={StaticResource Ui}}" Style="{StaticResource H2}" />
-                <ItemsControl ItemsSource="{Binding Metrics}">
+                <!-- Mỗi dòng mở đầu một ổ/màn khác (ổ thứ hai, màn phụ...) mang mô hình 3D
+                     của chính thiết bị đó ở bên phải, xoay độc lập với các mô hình khác. -->
+                <ItemsControl ItemsSource="{Binding DataContext.SelectedMetricRows,
+                                            RelativeSource={RelativeSource AncestorType=Window}}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
                       <Grid Margin="0,0,0,7">
                         <Grid.ColumnDefinitions>
                           <ColumnDefinition Width="230" />
                           <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0" Text="{Binding Label, Mode=OneWay}"
+                        <TextBox Grid.Column="0" Text="{Binding Metric.Label, Mode=OneWay}"
                                  Style="{StaticResource SelectableDim}"
                                  VerticalAlignment="Top" Margin="0,0,12,0" />
-                        <StackPanel Grid.Column="1">
-                          <TextBox Text="{Binding Value, Mode=OneWay}"
+                        <StackPanel Grid.Column="1" VerticalAlignment="Top">
+                          <TextBox Text="{Binding Metric.Value, Mode=OneWay}"
                                    Style="{StaticResource SelectableText}" />
-                          <TextBox Text="{Binding Note, Mode=OneWay}"
+                          <TextBox Text="{Binding Metric.Note, Mode=OneWay}"
                                    Style="{StaticResource SelectableDim}" FontSize="11.5"
-                                   Visibility="{Binding Note, Converter={StaticResource NullToVisibility}}" />
+                                   Visibility="{Binding Metric.Note, Converter={StaticResource NullToVisibility}}" />
                         </StackPanel>
+                        <views:ComponentModelView Grid.Column="2" Width="260" Height="170" Margin="12,0,0,6"
+                                                  VerticalAlignment="Top"
+                                                  Visibility="{Binding Spec, Converter={StaticResource NullToVisibility}}"
+                                                  Kind="{Binding Spec.Kind}" Spec="{Binding Spec}"
+                                                  StateKey="{Binding StateKey}"
+                                                  Rating="{Binding DataContext.SelectedComponent.Rating,
+                                                           RelativeSource={RelativeSource AncestorType=Window}}" />
                       </Grid>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>

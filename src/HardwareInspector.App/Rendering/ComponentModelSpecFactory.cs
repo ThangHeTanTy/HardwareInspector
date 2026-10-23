@@ -22,20 +22,84 @@ public static class ComponentModelSpecFactory
         ComponentKind.Cpu => Cpu(snapshot, assessment),
         ComponentKind.Gpu => Gpu(snapshot, assessment, gpuFanOverride),
         ComponentKind.Memory => Memory(snapshot, assessment),
-        ComponentKind.Storage => Storage(snapshot),
+        ComponentKind.Storage => Storage(snapshot, 0),
         ComponentKind.Battery => Battery(snapshot),
-        ComponentKind.Display => Display(snapshot),
+        ComponentKind.Display => Display(snapshot, PrimaryDisplayIndex(snapshot)),
         ComponentKind.Motherboard => Board(snapshot),
-        ComponentKind.Firmware => new ComponentModelSpec(ComponentKind.Firmware)
-        {
-            FirmwareChip = snapshot.Firmware.Status switch
-            {
-                IntegrityStatus.Compromised => Highlight.Fault,
-                IntegrityStatus.Suspicious => Highlight.Warn,
-                _ => Highlight.None
-            }
-        },
+        ComponentKind.Firmware => Firmware(snapshot),
         _ => new ComponentModelSpec(assessment.Kind)
+    };
+
+    /// <summary>
+    /// Mô hình cho dòng neo "storage:1", "display:2"... trong bảng thông số của linh kiện
+    /// gồm nhiều thiết bị. Trả null nếu neo không trỏ tới thiết bị nào.
+    /// </summary>
+    public static ComponentModelSpec? CreateForAnchor(SystemSnapshot snapshot, string? anchor)
+    {
+        if (string.IsNullOrWhiteSpace(anchor)) return null;
+        var parts = anchor.Split(':');
+        if (parts.Length != 2 || !int.TryParse(parts[1], out var index) || index < 0) return null;
+
+        return parts[0] switch
+        {
+            "storage" when index < snapshot.StorageDevices.Count => Storage(snapshot, index),
+            "display" when index < snapshot.Displays.Count => Display(snapshot, index),
+            _ => null
+        };
+    }
+
+    /// <summary>Mô hình nằm ở góc trên của trang chi tiết ứng với thiết bị nào.</summary>
+    public static string? HeaderAnchor(SystemSnapshot snapshot, ComponentKind kind) => kind switch
+    {
+        ComponentKind.Storage when snapshot.StorageDevices.Count > 0 => "storage:0",
+        ComponentKind.Display when snapshot.Displays.Count > 0 => $"display:{PrimaryDisplayIndex(snapshot)}",
+        _ => null
+    };
+
+    /// <summary>
+    /// Cảnh lắp ráp tổng thể cho phần kết luận: mọi linh kiện đọc được, mỗi cái đúng chỗ của nó.
+    /// </summary>
+    public static AssemblySpec CreateAssembly(SystemSnapshot snapshot, MachineAssessment assessment,
+        int? gpuFanOverride = null)
+    {
+        ComponentModelSpec? For(ComponentKind kind) =>
+            assessment[kind] is { } a ? Create(snapshot, a, gpuFanOverride) : null;
+
+        var memory = For(ComponentKind.Memory);
+        var drives = Enumerable.Range(0, Math.Min(snapshot.StorageDevices.Count, 6))
+            .Select(i => Storage(snapshot, i)).ToList();
+        var board = Board(snapshot) with { BoardRamChips = memory?.RamChips ?? Highlight.None };
+
+        return new AssemblySpec
+        {
+            IsLaptop = snapshot.IsLaptop,
+            Board = board,
+            Cpu = For(ComponentKind.Cpu),
+            Gpu = For(ComponentKind.Gpu),
+            Memory = memory,
+            Battery = snapshot.PrimaryBattery is not null ? Battery(snapshot) : null,
+            Firmware = Firmware(snapshot),
+            Drives = drives,
+            Displays = Enumerable.Range(0, Math.Min(snapshot.Displays.Count, 4))
+                .Select(i => Display(snapshot, i)).ToList(),
+            Ratings = assessment.Components.GroupBy(c => c.Kind).ToDictionary(g => g.Key, g => g.First().Rating)
+        };
+    }
+
+    private static int PrimaryDisplayIndex(SystemSnapshot snapshot)
+    {
+        var i = snapshot.Displays.FindIndex(d => d.IsPrimary);
+        return i >= 0 ? i : 0;
+    }
+
+    private static ComponentModelSpec Firmware(SystemSnapshot snapshot) => new(ComponentKind.Firmware)
+    {
+        FirmwareChip = snapshot.Firmware.Status switch
+        {
+            IntegrityStatus.Compromised => Highlight.Fault,
+            IntegrityStatus.Suspicious => Highlight.Warn,
+            _ => Highlight.None
+        }
     };
 
     // ------------------------------------------------------------------
@@ -147,11 +211,12 @@ public static class ComponentModelSpecFactory
         };
     }
 
-    private static ComponentModelSpec Storage(SystemSnapshot snapshot)
+    /// <summary>Ổ thứ <paramref name="index"/> theo đúng thứ tự trong bảng thông số.</summary>
+    private static ComponentModelSpec Storage(SystemSnapshot snapshot, int index)
     {
-        // Ổ mang hệ điều hành thường là ổ số 0 — là ổ người mua quan tâm nhất.
-        var drive = snapshot.StorageDevices.OrderBy(d => d.DeviceIndex).FirstOrDefault();
-        if (drive is null) return new ComponentModelSpec(ComponentKind.Storage);
+        if (index < 0 || index >= snapshot.StorageDevices.Count)
+            return new ComponentModelSpec(ComponentKind.Storage) { DeviceIndex = index };
+        var drive = snapshot.StorageDevices[index];
 
         var isHdd = drive.MediaType.Contains("HDD", StringComparison.OrdinalIgnoreCase) || drive.SpindleSpeedRpm > 0;
         var isNvme = drive.BusType.Contains("NVMe", StringComparison.OrdinalIgnoreCase);
@@ -169,6 +234,7 @@ public static class ComponentModelSpecFactory
 
         return new ComponentModelSpec(ComponentKind.Storage)
         {
+            DeviceIndex = index,
             DriveForm = form,
             NandPackages = gb <= 600 ? 1 : 2,
             DriveMedia = media
@@ -193,9 +259,9 @@ public static class ComponentModelSpecFactory
         };
     }
 
-    private static ComponentModelSpec Display(SystemSnapshot snapshot)
+    private static ComponentModelSpec Display(SystemSnapshot snapshot, int index)
     {
-        var display = snapshot.Displays.FirstOrDefault(d => d.IsPrimary) ?? snapshot.Displays.FirstOrDefault();
+        var display = index >= 0 && index < snapshot.Displays.Count ? snapshot.Displays[index] : null;
         var (w, h) = display is { NativeWidthPx: > 0, NativeHeightPx: > 0 }
             ? (display.NativeWidthPx!.Value, display.NativeHeightPx!.Value)
             : (display?.WidthPx ?? 16, display?.HeightPx ?? 9);
@@ -203,6 +269,7 @@ public static class ComponentModelSpecFactory
 
         return new ComponentModelSpec(ComponentKind.Display)
         {
+            DeviceIndex = index,
             PanelForm = display is { IsInternal: true } ? PanelForm.LaptopLid : PanelForm.Monitor,
             Aspect = aspect
         };
@@ -221,15 +288,74 @@ public static class ComponentModelSpecFactory
         var pcie = up.ExpansionSlots.Where(s => s.Kind == ExpansionSlotKind.PciExpress).ToList();
         var m2 = up.ExpansionSlots.Count(s => s.Kind is ExpansionSlotKind.M2KeyM or ExpansionSlotKind.M2KeyB);
 
+        var (rear, sata, fans, usbHeaders) = Ports(snapshot);
+
         return new ComponentModelSpec(ComponentKind.Motherboard)
         {
             BoardForm = snapshot.IsLaptop ? BoardForm.Laptop : BoardForm.Atx,
             DimmSlots = slots,
+            RearPorts = rear,
+            SataPorts = sata,
+            FanHeaders = fans,
+            UsbHeaders = usbHeaders,
             PcieX16Slots = up.DataAvailable && pcie.Count > 0 ? Math.Clamp(pcie.Count(s => s.PcieLanes >= 8), 0, 3) : 1,
             PcieSmallSlots = up.DataAvailable && pcie.Count > 0 ? Math.Clamp(pcie.Count(s => s.PcieLanes is null or < 8), 0, 3) : 2,
-            M2Slots = up.DataAvailable && m2 > 0 ? Math.Clamp(m2, 1, 4) : 1
+            M2Slots = up.DataAvailable && m2 > 0 ? Math.Clamp(m2, 1, 4) : 1,
+            M2Occupied = snapshot.StorageDevices.Count(d => d.BusType.Contains("NVMe", StringComparison.OrdinalIgnoreCase))
         };
     }
+
+    /// <summary>
+    /// Cổng mặt bên và đầu cắm trên bo, lấy từ SMBIOS Type 8. Bảng trống (thường gặp ở laptop)
+    /// thì dùng bộ cổng phổ biến của loại máy đó.
+    /// </summary>
+    private static (string Rear, int Sata, int Fans, int UsbHeaders) Ports(SystemSnapshot snapshot)
+    {
+        var ports = snapshot.Upgrade.Ports;
+        var external = ports.Where(p => p.IsExternal && p.Kind != PortKind.Other).ToList();
+
+        string rear;
+        if (external.Count > 0)
+        {
+            // Sắp theo thứ tự hay gặp trên tấm I/O: PS/2, USB, mạng, xuất hình, âm thanh.
+            var order = new[] { PortKind.Ps2, PortKind.UsbA, PortKind.UsbC, PortKind.Lan, PortKind.Hdmi,
+                PortKind.DisplayPort, PortKind.Dvi, PortKind.Vga, PortKind.Serial, PortKind.Audio };
+            rear = string.Concat(external
+                .OrderBy(p => Array.IndexOf(order, p.Kind))
+                .Take(24)
+                .Select(p => Code(p.Kind))
+                .Where(c => c != '\0'));
+        }
+        else
+        {
+            rear = snapshot.IsLaptop ? "UUCHA" : "PUUUUUUCLHDAAA";
+        }
+
+        var sata = ports.Count(p => p.Kind == PortKind.Sata);
+        var fans = ports.Count(p => p.Kind == PortKind.FanHeader);
+        var usb = ports.Count(p => p.Kind == PortKind.UsbHeader);
+        var hasInternal = sata + fans + usb > 0;
+
+        return (rear,
+            hasInternal ? Math.Min(sata, 8) : snapshot.IsLaptop ? 0 : 4,
+            hasInternal ? Math.Min(fans, 8) : snapshot.IsLaptop ? 1 : 3,
+            hasInternal ? Math.Min(usb, 4) : snapshot.IsLaptop ? 0 : 2);
+    }
+
+    private static char Code(PortKind kind) => kind switch
+    {
+        PortKind.Ps2 => 'P',
+        PortKind.UsbA => 'U',
+        PortKind.UsbC => 'C',
+        PortKind.Lan => 'L',
+        PortKind.Hdmi => 'H',
+        PortKind.DisplayPort => 'D',
+        PortKind.Vga => 'V',
+        PortKind.Dvi => 'I',
+        PortKind.Audio => 'A',
+        PortKind.Serial => 'S',
+        _ => '\0'
+    };
 
     // ------------------------------------------------------------------
 

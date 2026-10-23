@@ -34,10 +34,12 @@ public sealed class StorageAnalyzer : IComponentAnalyzer
         var merged = new ScoreCard(Kind, $"{results.Count} ổ lưu trữ")
             .Headline($"Ổ yếu nhất: {worst.DisplayName} — {worst.Rating.ToText()}");
 
-        foreach (var r in results)
+        for (var i = 0; i < results.Count; i++)
         {
+            var r = results[i];
             merged.Metric(r.DisplayName, $"{r.Rating.ToText()} ({r.Score}/100)",
-                r.OperatingTime.HasValue ? $"Đã chạy {r.OperatingTime.Value.ToHumanDuration()}" : null);
+                r.OperatingTime.HasValue ? $"Đã chạy {r.OperatingTime.Value.ToHumanDuration()}" : null,
+                anchor: $"storage:{i}");
             foreach (var m in r.Metrics) merged.Metric($"  {r.DisplayName} · {m.Label}", m.Value, m.Note, m.Severity);
             foreach (var f in r.Findings) merged.Add(f);
         }

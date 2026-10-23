@@ -12,6 +12,7 @@ namespace HardwareInspector.Firmware.Upgrade;
 ///   Type 16 — trần dung lượng RAM và số khe mà bo mạch khai báo
 ///   Type 17 — từng khe RAM, gồm cả khe đang trống (Win32_PhysicalMemory chỉ trả khe đã cắm)
 ///   Type 9  — khe mở rộng, gồm loại chân M.2, thế hệ PCIe, số làn và tình trạng trống hay đã dùng
+///   Type 8  — cổng kết nối: cổng ngoài ở mặt bên máy và đầu cắm trên bo (SATA, quạt, header USB)
 /// </summary>
 public sealed class UpgradeCapabilityCollector : IInfoCollector
 {
@@ -29,6 +30,7 @@ public sealed class UpgradeCapabilityCollector : IInfoCollector
         ReadMemoryArray(smbios, upgrade);
         ReadMemorySlots(smbios, upgrade);
         ReadExpansionSlots(smbios, upgrade);
+        ReadPorts(smbios, upgrade);
 
         DetectSolderedMemory(upgrade);
 
@@ -158,6 +160,65 @@ public sealed class UpgradeCapabilityCollector : IInfoCollector
                 IsUnavailable = unavailable
             });
         }
+    }
+
+    /// <summary>
+    /// Type 8. Bảng này do hãng bo mạch tự điền nên chất lượng không đều: bo PC thường
+    /// khai đủ, nhiều laptop chỉ khai vài mục hoặc để trống. Tên ký hiệu in trên bo
+    /// (HDMI, DP, TYPE-C, SATA3_1, CPU_FAN...) thường nói rõ hơn mã loại đầu cắm,
+    /// nên được ưu tiên khi phân loại.
+    /// </summary>
+    private static void ReadPorts(SmbiosReader smbios, UpgradeCapability upgrade)
+    {
+        foreach (var s in smbios.All(8))
+        {
+            if (s.Length < 0x09) continue;
+            var d = s.Data;
+
+            var internalName = s.GetString(d[0x04]);
+            var externalName = s.GetString(d[0x06]);
+            var internalType = d[0x05];
+            var externalType = d[0x07];
+            var portType = d[0x08];
+            var isExternal = externalType != 0x00 || !string.IsNullOrWhiteSpace(externalName);
+
+            upgrade.Ports.Add(new PortConnectorState
+            {
+                InternalDesignator = internalName,
+                ExternalDesignator = externalName,
+                IsExternal = isExternal,
+                Kind = ClassifyPort($"{externalName} {internalName}", isExternal ? externalType : internalType,
+                    portType, isExternal)
+            });
+        }
+    }
+
+    private static PortKind ClassifyPort(string name, byte connector, byte portType, bool external)
+    {
+        var n = name.ToUpperInvariant();
+
+        if (!external)
+        {
+            if (n.Contains("SATA") || connector == 0x22) return PortKind.Sata;
+            if (n.Contains("FAN") || n.Contains("PUMP")) return PortKind.FanHeader;
+            if (n.Contains("USB") || portType == 0x10) return PortKind.UsbHeader;
+        }
+
+        if (n.Contains("TYPE-C") || n.Contains("TYPEC") || n.Contains("USB-C") || n.Contains("USBC") ||
+            n.Contains("TBT") || n.Contains("THUNDERBOLT")) return PortKind.UsbC;
+        if (n.Contains("HDMI")) return PortKind.Hdmi;
+        if (n.Contains("DISPLAYPORT") || n.Contains("DP")) return PortKind.DisplayPort;
+        if (n.Contains("DVI")) return PortKind.Dvi;
+        if (n.Contains("VGA") || n.Contains("CRT") || n.Contains("D-SUB") || connector == 0x07) return PortKind.Vga;
+        if (n.Contains("LAN") || n.Contains("RJ45") || n.Contains("RJ-45") || connector == 0x0B || portType == 0x1F)
+            return PortKind.Lan;
+        if (n.Contains("AUDIO") || n.Contains("MIC") || n.Contains("LINE") || n.Contains("SPDIF") ||
+            n.Contains("HEADPHONE") || connector == 0x1F || portType == 0x1D) return PortKind.Audio;
+        if (n.Contains("PS2") || n.Contains("PS/2") || n.Contains("KEYBOARD") || n.Contains("MOUSE") ||
+            connector == 0x0F || portType is 0x0D or 0x0E) return PortKind.Ps2;
+        if (n.Contains("COM") || n.Contains("SERIAL") || portType == 0x09) return PortKind.Serial;
+        if (n.Contains("USB") || connector == 0x12 || portType == 0x10) return PortKind.UsbA;
+        return PortKind.Other;
     }
 
     private static string TranslateErrorCorrection(byte code) => code switch

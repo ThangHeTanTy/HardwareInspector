@@ -37,7 +37,7 @@ public sealed class DisplayAnalyzer : IComponentAnalyzer
         {
             var r = results[i];
             merged.Metric($"Màn {i + 1}", $"{r.DisplayName} — {r.Rating.ToText()} ({r.Score}/100)",
-                displays[i].ConnectionText);
+                displays[i].ConnectionText, anchor: $"display:{i}");
             foreach (var m in r.Metrics) merged.Metric($"  Màn {i + 1} · {m.Label}", m.Value, m.Note, m.Severity);
             foreach (var f in r.Findings) merged.Add(f);
         }
