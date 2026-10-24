@@ -284,6 +284,34 @@
                                             FanCountChosen="OnFanCountChosen" />
                 </Grid>
 
+                <!-- Chọn tay cổng thật của từng màn, khi bộ chuyển đổi làm phần mềm nhận sai cổng. -->
+                <StackPanel Margin="0,0,0,14"
+                            Visibility="{Binding DataContext.ShowDisplayPortChoices,
+                                         RelativeSource={RelativeSource AncestorType=Window},
+                                         Converter={StaticResource BoolToVisibility}}">
+                  <TextBlock Text="{Binding [Display.Port.Header], Source={StaticResource Ui}}" Style="{StaticResource H2}" />
+                  <TextBlock Text="{Binding [Display.Port.Hint], Source={StaticResource Ui}}"
+                             Foreground="#9AA0AA" FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,8" />
+                  <ItemsControl ItemsSource="{Binding DataContext.DisplayPortChoices,
+                                              RelativeSource={RelativeSource AncestorType=Window}}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Grid Margin="0,0,0,6">
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                          </Grid.ColumnDefinitions>
+                          <TextBlock Text="{Binding Title}" VerticalAlignment="Center"
+                                     TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
+                          <ComboBox Grid.Column="1" MinWidth="240"
+                                    ItemsSource="{Binding Options}" DisplayMemberPath="Label"
+                                    SelectedItem="{Binding Selected, Mode=TwoWay}" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+
                 <!-- Thông số: nhãn và giá trị đều bôi đen được -->
                 <TextBlock Text="{Binding [Detail.Specs], Source={StaticResource Ui}}" Style="{StaticResource H2}" />
                 <!-- Mỗi dòng mở đầu một ổ/màn khác (ổ thứ hai, màn phụ...) mang mô hình 3D

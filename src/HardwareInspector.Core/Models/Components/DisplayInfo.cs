@@ -55,6 +55,51 @@ public sealed class DisplayInfo
 
     public bool ViaConverter => ReportedConnection is not null && ReportedConnection != Connection;
 
+    /// <summary>Mã VideoOutputTechnology thô Windows trả về, để hiển thị làm căn cứ.</summary>
+    public long? ReportedTechnologyCode { get; set; }
+
+    /// <summary>Cổng Windows báo (dịch từ <see cref="ReportedTechnologyCode"/>), giữ nguyên khi có chọn tay.</summary>
+    public DisplayConnection? WindowsConnection { get; set; }
+
+    /// <summary>Nơi đọc được EDID: "registry", "WMI", hoặc null khi không đọc được.</summary>
+    public string? EdidSource { get; set; }
+
+    /// <summary>Giá trị byte 20 của EDID (kiểu tín hiệu vào), để hiển thị làm căn cứ.</summary>
+    public byte? EdidInputByte { get; set; }
+
+    // Kết quả tự nhận diện, giữ lại khi người dùng chọn tay để bỏ chọn thì trả về như cũ.
+    private (DisplayConnection Connection, DisplayConnection? Reported)? _detected;
+
+    /// <summary>Cổng do người dùng chọn tay, không phải do phần mềm nhận diện.</summary>
+    public bool ConnectionSetByUser => _detected is not null;
+
+    /// <summary>Cổng phần mềm tự nhận diện, kể cả khi người dùng đã chọn tay cổng khác.</summary>
+    public DisplayConnection DetectedConnection => _detected?.Connection ?? Connection;
+
+    /// <summary>
+    /// Đặt cổng thật theo lựa chọn của người dùng. Có những bộ chuyển đổi tự thay EDID
+    /// của màn bằng EDID tín hiệu số, khi đó phần mềm không còn cách nào biết màn là VGA;
+    /// người dùng nhìn được dây cắm thì chọn tay. Truyền null để quay về tự nhận diện.
+    /// Cổng Windows báo vẫn được giữ để hiển thị dạng "qua bộ chuyển".
+    /// </summary>
+    public void OverrideConnection(DisplayConnection? port)
+    {
+        if (_detected is { } d)
+        {
+            (Connection, ReportedConnection) = d;
+            _detected = null;
+        }
+
+        if (port is not { } p || p == Connection) return;
+
+        _detected = (Connection, ReportedConnection);
+        var reported = ReportedConnection ?? Connection;
+        ReportedConnection = reported is DisplayConnection.Unknown or DisplayConnection.Internal || reported == p
+            ? null
+            : reported;
+        Connection = p;
+    }
+
     // --- Chế độ đang chạy ---
     public int WidthPx { get; set; }
     public int HeightPx { get; set; }
@@ -103,6 +148,8 @@ public sealed class DisplayInfo
         DisplayConnection.Other => "Cổng khác",
         _ => "Không xác định"
     };
+
+    public static string LongName(DisplayConnection connection) => NameOf(connection);
 
     private static string ShortOf(DisplayConnection connection) => connection switch
     {
