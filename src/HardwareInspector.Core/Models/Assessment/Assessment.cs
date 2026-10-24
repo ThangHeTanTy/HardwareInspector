@@ -3,7 +3,15 @@ using HardwareInspector.Core.Models.Sensors;
 namespace HardwareInspector.Core.Models.Assessment;
 
 /// <summary>Một dòng thông số hiển thị trong bảng chi tiết linh kiện.</summary>
-public sealed record MetricLine(string Label, string Value, string? Note = null, Severity Severity = Severity.Info);
+public sealed record MetricLine(string Label, string Value, string? Note = null, Severity Severity = Severity.Info)
+{
+    /// <summary>
+    /// Đánh dấu dòng mở đầu phần thông tin của một thiết bị cụ thể khi linh kiện gồm
+    /// nhiều thiết bị, dạng "storage:1" hay "display:0" (chỉ số trong danh sách của snapshot).
+    /// Giao diện dùng dấu này để đặt mô hình 3D của đúng thiết bị đó cạnh dòng.
+    /// </summary>
+    public string? Anchor { get; init; }
+}
 
 public sealed class ComponentAssessment
 {

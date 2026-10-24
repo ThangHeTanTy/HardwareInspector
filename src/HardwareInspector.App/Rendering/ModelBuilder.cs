@@ -28,10 +28,53 @@ public sealed class ModelBuilder
 {
     private readonly Dictionary<string, Surface> _byMaterial = new();
     private readonly List<Surface> _order = new();
+    private readonly List<(V3 Offset, double RotX, double RotY, double RotZ, double Scale)> _placements = new();
 
     public IReadOnlyList<Surface> Surfaces => _order;
 
     public double MinY => _order.SelectMany(s => s.Positions).Select(p => p.Y).DefaultIfEmpty(0).Min();
+
+    /// <summary>
+    /// Đặt mọi hình vẽ tiếp theo vào vị trí, góc xoay và tỉ lệ cho trước, cho tới khi
+    /// đối tượng trả về bị Dispose. Dùng để ghép mô hình từng linh kiện vào cảnh lắp ráp
+    /// mà không phải sửa toạ độ bên trong từng mô hình. Gọi lồng nhau được.
+    /// </summary>
+    public IDisposable Place(V3 offset, double rotX = 0, double rotY = 0, double rotZ = 0, double scale = 1)
+    {
+        _placements.Add((offset, rotX, rotY, rotZ, scale));
+        return new PlacementScope(this);
+    }
+
+    private sealed class PlacementScope(ModelBuilder owner) : IDisposable
+    {
+        private bool _done;
+        public void Dispose()
+        {
+            if (_done) return;
+            _done = true;
+            owner._placements.RemoveAt(owner._placements.Count - 1);
+        }
+    }
+
+    private V3 ToWorld(V3 p)
+    {
+        for (var i = _placements.Count - 1; i >= 0; i--)
+        {
+            var t = _placements[i];
+            p = Rotate(p, t.RotX, t.RotY, t.RotZ) * t.Scale + t.Offset;
+        }
+        return p;
+    }
+
+    private V3 NormalToWorld(V3 n)
+    {
+        for (var i = _placements.Count - 1; i >= 0; i--)
+        {
+            var t = _placements[i];
+            n = Rotate(n, t.RotX, t.RotY, t.RotZ);
+        }
+        return n;
+    }
 
     private Surface Get(string material)
     {
@@ -64,13 +107,13 @@ public sealed class ModelBuilder
             var c = Mul(n, h);
             var du = Mul(u, h);
             var dv = Mul(v, h);
-            var normal = Rotate(n, rotX, rotY, rotZ);
+            var normal = NormalToWorld(Rotate(n, rotX, rotY, rotZ));
             var start = s.Positions.Count;
 
             foreach (var (su, sv) in new[] { (-1, -1), (1, -1), (1, 1), (-1, 1) })
             {
                 var local = c + du * su + dv * sv;
-                s.Positions.Add(center + Rotate(local, rotX, rotY, rotZ));
+                s.Positions.Add(ToWorld(center + Rotate(local, rotX, rotY, rotZ)));
                 s.Normals.Add(normal);
             }
 
@@ -132,8 +175,11 @@ public sealed class ModelBuilder
     /// Thêm tứ giác p0-p1-p2-p3. Chiều cuốn tam giác được chọn sao cho mặt trước
     /// hướng theo pháp tuyến — WPF chỉ vẽ mặt trước khi không gán BackMaterial.
     /// </summary>
-    private static void Quad(Surface s, V3 p0, V3 p1, V3 p2, V3 p3, V3 n01, V3 n23)
+    private void Quad(Surface s, V3 p0, V3 p1, V3 p2, V3 p3, V3 n01, V3 n23)
     {
+        (p0, p1, p2, p3) = (ToWorld(p0), ToWorld(p1), ToWorld(p2), ToWorld(p3));
+        (n01, n23) = (NormalToWorld(n01), NormalToWorld(n23));
+
         var start = s.Positions.Count;
         s.Positions.AddRange(new[] { p0, p1, p2, p3 });
         s.Normals.AddRange(new[] { n01, n23, n23, n01 });

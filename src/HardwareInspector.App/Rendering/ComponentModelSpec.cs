@@ -24,6 +24,12 @@ public enum BoardForm { Atx, Laptop }
 /// </summary>
 public sealed record ComponentModelSpec(ComponentKind Kind)
 {
+    /// <summary>
+    /// Chỉ số thiết bị trong danh sách của snapshot (ổ thứ mấy, màn thứ mấy).
+    /// Giữ để hai ổ giống hệt nhau vẫn là hai mô hình riêng, xoay độc lập.
+    /// </summary>
+    public int DeviceIndex { get; init; }
+
     // --- CPU ---
     public CpuPackage CpuPackage { get; init; } = CpuPackage.IntelLga;
     public double CpuWidthMm { get; init; } = 37.5;
@@ -70,6 +76,23 @@ public sealed record ComponentModelSpec(ComponentKind Kind)
     public int PcieSmallSlots { get; init; } = 2;
     public int M2Slots { get; init; } = 1;
 
+    /// <summary>
+    /// Cổng ở mặt sau/mặt bên bo mạch, mỗi ký tự một cổng theo thứ tự lắp:
+    /// P = PS/2, U = USB-A, C = USB-C, L = LAN, H = HDMI, D = DisplayPort, V = VGA,
+    /// I = DVI, A = jack âm thanh, S = cổng COM.
+    /// </summary>
+    public string RearPorts { get; init; } = "PUUUUUUCLHDAAA";
+
+    public int SataPorts { get; init; } = 4;
+    public int FanHeaders { get; init; } = 3;
+    public int UsbHeaders { get; init; } = 2;
+
+    /// <summary>Dùng trong cảnh lắp ráp: tô chip RAM trên bo theo đánh giá RAM.</summary>
+    public Highlight BoardRamChips { get; init; }
+
+    /// <summary>Dùng trong cảnh lắp ráp: số khe M.2 đang có ổ, không vẽ tấm tản nhiệt che lên.</summary>
+    public int M2Occupied { get; init; }
+
     // --- Firmware ---
     public Highlight FirmwareChip { get; init; }
 
@@ -83,4 +106,26 @@ public sealed record ComponentModelSpec(ComponentKind Kind)
         ComponentKind.Storage => DriveForm != DriveForm.M2 && DriveMedia != Highlight.None,
         _ => false
     };
+}
+
+/// <summary>
+/// Cảnh lắp ráp tổng thể: các linh kiện đọc được đặt đúng chỗ của chúng — CPU trong socket,
+/// RAM trong khe, card đồ hoạ trong khe PCIe, ổ M.2 trong khe M.2, ổ SATA nối cáp về bo,
+/// màn hình nối cáp về card xuất hình. Mỗi linh kiện có một cột mốc tô màu theo mức đánh giá.
+/// </summary>
+public sealed record AssemblySpec
+{
+    public bool IsLaptop { get; init; }
+    public required ComponentModelSpec Board { get; init; }
+    public ComponentModelSpec? Cpu { get; init; }
+    public ComponentModelSpec? Gpu { get; init; }
+    public ComponentModelSpec? Memory { get; init; }
+    public ComponentModelSpec? Battery { get; init; }
+    public ComponentModelSpec? Firmware { get; init; }
+    public IReadOnlyList<ComponentModelSpec> Drives { get; init; } = Array.Empty<ComponentModelSpec>();
+    public IReadOnlyList<ComponentModelSpec> Displays { get; init; } = Array.Empty<ComponentModelSpec>();
+
+    /// <summary>Mức đánh giá của từng linh kiện, quyết định màu cột mốc.</summary>
+    public IReadOnlyDictionary<ComponentKind, HealthRating> Ratings { get; init; } =
+        new Dictionary<ComponentKind, HealthRating>();
 }
