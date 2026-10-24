@@ -28,6 +28,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private readonly MachineAssessmentService _assessmentService = new();
     private readonly BenchmarkRunner _benchmarkRunner = new();
     private readonly GpuFanOverrideStore _fanOverrides = new();
+    private readonly DisplayPortOverrideStore _portOverrides = new();
     private AssemblySpec? _overviewModel;
     private CancellationTokenSource? _cts;
 
@@ -52,6 +53,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         CopyComponentCommand = new RelayCommand(CopySelectedComponent, () => SelectedComponent is not null);
 
         _selectedLanguage = Loc.Options.First(o => o.Language == Loc.Current);
+        _pipeline.BeforeAnalysis = snapshot =>
+        {
+            foreach (var d in snapshot.Displays) d.OverrideConnection(_portOverrides.Get(d));
+        };
         _ = _pipeline.StartSensorsAsync();
     }
 
@@ -76,6 +81,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             // Gán Loc.Current phát sự kiện, mọi thực thể UiStrings tự làm mới binding.
             Loc.Current = value.Language;
             RebuildLocalizedContent();
+            if (_snapshot is { } snapshot) RefreshPortChoices(snapshot);
         }
     }
 
@@ -105,6 +111,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<ComponentAssessment> Components { get; } = new();
     public ObservableCollection<BenchmarkResult> BenchmarkResults { get; } = new();
     public ObservableCollection<DisplayInfo> Displays { get; } = new();
+    public ObservableCollection<DisplayPortChoice> DisplayPortChoices { get; } = new();
+
+    /// <summary>Ô chọn cổng thật chỉ hiện khi đang xem phần màn hình và có màn rời.</summary>
+    public bool ShowDisplayPortChoices =>
+        SelectedComponent?.Kind == ComponentKind.Display && DisplayPortChoices.Count > 0;
     public ObservableCollection<WarrantyLookup> WarrantyLookups { get; } = new();
 
     public RelayCommand ScanCommand { get; }
@@ -166,6 +177,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             CopyComponentCommand.RaiseCanExecuteChanged();
             OnPropertyChanged(nameof(SelectedModelSpec));
             OnPropertyChanged(nameof(SelectedMetricRows));
+            OnPropertyChanged(nameof(ShowDisplayPortChoices));
         }
     }
 
@@ -206,6 +218,40 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _fanOverrides.Set(_snapshot?.PrimaryGpu?.Name, count);
         OnPropertyChanged(nameof(SelectedModelSpec));
         RefreshOverviewModel();
+    }
+
+    private void RefreshDisplays(SystemSnapshot snapshot)
+    {
+        var selected = SelectedDisplay;
+        Displays.Clear();
+        foreach (var d in snapshot.Displays) Displays.Add(d);
+        SelectedDisplay = (selected is not null && Displays.Contains(selected) ? selected : null)
+                          ?? Displays.FirstOrDefault(d => d.IsPrimary) ?? Displays.FirstOrDefault();
+        OnPropertyChanged(nameof(HasMultipleDisplays));
+    }
+
+    private void RefreshPortChoices(SystemSnapshot snapshot)
+    {
+        DisplayPortChoices.Clear();
+        for (var i = 0; i < snapshot.Displays.Count; i++)
+        {
+            var d = snapshot.Displays[i];
+            if (d.DetectedConnection == DisplayConnection.Internal) continue;
+            DisplayPortChoices.Add(new DisplayPortChoice(d, i, OnDisplayPortChosen));
+        }
+        OnPropertyChanged(nameof(ShowDisplayPortChoices));
+    }
+
+    /// <summary>Người dùng chọn cổng thật cho một màn: ghi nhớ, áp vào ảnh chụp và chấm điểm lại.</summary>
+    private void OnDisplayPortChosen(DisplayPortChoice choice)
+    {
+        _portOverrides.Set(choice.Display, choice.Selected.Value);
+        choice.Display.OverrideConnection(choice.Selected.Value);
+        RebuildLocalizedContent();
+
+        // Nhãn ô chọn màn hình có tên cổng, dựng lại danh sách để nó cập nhật.
+        // Không dựng lại các ô chọn cổng: ô vừa đổi đang nằm trong danh sách đó.
+        if (_snapshot is { } snapshot) RefreshDisplays(snapshot);
     }
 
     /// <summary>Màn hình mà bài kiểm tra màu sẽ chạy lên.</summary>
@@ -313,10 +359,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             foreach (var c in assessment.Components) Components.Add(c);
             SelectedComponent = Components.FirstOrDefault();
 
-            Displays.Clear();
-            foreach (var d in snapshot.Displays) Displays.Add(d);
-            SelectedDisplay = Displays.FirstOrDefault(d => d.IsPrimary) ?? Displays.FirstOrDefault();
-            OnPropertyChanged(nameof(HasMultipleDisplays));
+            RefreshDisplays(snapshot);
+            RefreshPortChoices(snapshot);
 
             WarrantyLookups.Clear();
             foreach (var w in assessment.WarrantyLookups) WarrantyLookups.Add(w);

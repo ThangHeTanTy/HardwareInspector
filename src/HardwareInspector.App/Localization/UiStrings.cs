@@ -82,6 +82,12 @@ public sealed class UiStrings : INotifyPropertyChanged
         ["Detail.Sensors"] = new("Cảm biến (min / trung bình / max)", "Sensors (min / average / max)"),
         ["Detail.Findings"] = new("Phát hiện và khuyến nghị", "Findings and recommendations"),
         ["Detail.Score"] = new("Điểm ", "Score "),
+        ["Display.Port.Header"] = new("Cổng thật của màn hình", "Actual display port"),
+        ["Display.Port.Hint"] = new(
+            "Bộ chuyển đổi (adapter, hoặc chip chuyển sau cổng VGA trên bo) có thể làm phần mềm nhận sai cổng. Nếu khác dây cắm thực tế, chọn lại ở đây — kết quả được tính lại ngay và ghi nhớ cho lần sau.",
+            "Converters (adapters, or the converter chip behind a motherboard VGA port) can hide the real port. If this differs from the actual cable, pick it here — the result is recalculated and remembered."),
+        ["Display.Port.Screen"] = new("Màn {0}", "Display {0}"),
+        ["Display.Port.Auto"] = new("Tự nhận diện ({0})", "Auto-detect ({0})"),
         ["Detail.Action"] = new("Nên làm: ", "What to do: "),
 
         // --- Thẻ BIOS ---

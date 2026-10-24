@@ -69,11 +69,21 @@ public sealed class DisplayCollector : IInfoCollector
                 ApplyCurrentMode(display, adapter.DeviceName);
 
                 var instancePath = ExtractInstancePath(monitor.DeviceID);
-                var edid = ReadEdidFromRegistry(instancePath)
-                           ?? LookupWmiEdid(wmiEdidMap, instancePath);
+                var source = "registry";
+                var edid = ReadEdidFromRegistry(instancePath);
+                if (edid is null || !EdidParser.TryParse(edid, display))
+                {
+                    source = "WMI";
+                    edid = LookupWmiEdid(wmiEdidMap, instancePath);
+                    if (edid is not null && !EdidParser.TryParse(edid, display)) edid = null;
+                }
 
-                if (edid is not null && EdidParser.TryParse(edid, display))
+                if (edid is not null)
+                {
                     display.EdidAvailable = true;
+                    display.EdidSource = source;
+                    display.EdidInputByte = edid[20];
+                }
 
                 display.Connection = ResolveConnection(connectionMap, instancePath, display);
 
@@ -136,24 +146,35 @@ public sealed class DisplayCollector : IInfoCollector
     }
 
     /// <summary>
-    /// Đường dự phòng: WmiMonitorDescriptorMethods trong root\WMI cũng phơi bày EDID,
-    /// hữu ích khi tài khoản không đọc được nhánh Enum của registry.
+    /// Đường dự phòng: WmiMonitorDescriptorMethods trong root\WMI trả khối EDID thô qua
+    /// phương thức WmiGetMonitorRawEEdidV1Block, hữu ích khi registry không có khoá
+    /// Device Parameters cho màn (gặp với một số driver và bộ chuyển đổi).
     /// </summary>
     private static Dictionary<string, byte[]> ReadEdidFromWmi()
     {
         var map = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var mo in WmiQuery.Query(
-            "SELECT InstanceName, ProductCodeID, SerialNumberID, UserFriendlyName, " +
-            "ManufacturerName, YearOfManufacture, WeekOfManufacture FROM WmiMonitorID",
-            WmiQuery.WmiNamespace))
+            "SELECT * FROM WmiMonitorDescriptorMethods", WmiQuery.WmiNamespace))
         {
             var instance = mo.Str("InstanceName");
             if (string.IsNullOrWhiteSpace(instance)) continue;
 
             // InstanceName có đuôi _0 và dùng dấu \ — cắt đuôi để khớp với instance path.
             var key = instance.EndsWith("_0", StringComparison.Ordinal) ? instance[..^2] : instance;
-            map.TryAdd(key, Array.Empty<byte>());
+
+            try
+            {
+                using var input = mo.GetMethodParameters("WmiGetMonitorRawEEdidV1Block");
+                input["BlockId"] = (byte)0;
+                using var output = mo.InvokeMethod("WmiGetMonitorRawEEdidV1Block", input, null);
+                if (output?["BlockContent"] is byte[] block && block.Length >= 128)
+                    map.TryAdd(key, block);
+            }
+            catch
+            {
+                // Phương thức cần quyền Administrator và không phải driver nào cũng hỗ trợ.
+            }
         }
 
         return map;
@@ -169,9 +190,9 @@ public sealed class DisplayCollector : IInfoCollector
     /// Lưu ý: giá trị này mô tả đầu ra của card đồ hoạ, không phải đầu vào của màn hình.
     /// Hai thứ lệch nhau mỗi khi có bộ chuyển đổi ở giữa — xem <see cref="ResolveConnection"/>.
     /// </summary>
-    private static Dictionary<string, DisplayConnection> ReadConnectionTypes()
+    private static Dictionary<string, long> ReadConnectionTypes()
     {
-        var map = new Dictionary<string, DisplayConnection>(StringComparer.OrdinalIgnoreCase);
+        var map = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var mo in WmiQuery.Query(
             "SELECT InstanceName, VideoOutputTechnology FROM WmiMonitorConnectionParams",
@@ -181,7 +202,7 @@ public sealed class DisplayCollector : IInfoCollector
             if (string.IsNullOrWhiteSpace(instance)) continue;
             if (instance.EndsWith("_0", StringComparison.Ordinal)) instance = instance[..^2];
 
-            map[instance] = TranslateOutputTechnology(mo.Long("VideoOutputTechnology", -2));
+            map[instance] = mo.Long("VideoOutputTechnology", -2);
         }
 
         return map;
@@ -217,9 +238,15 @@ public sealed class DisplayCollector : IInfoCollector
     /// khai mình nhận tín hiệu analog, nên ưu tiên EDID và ghi lại cổng Windows báo để hiển thị.
     /// </summary>
     private static DisplayConnection ResolveConnection(
-        Dictionary<string, DisplayConnection> map, string instancePath, DisplayInfo display)
+        Dictionary<string, long> map, string instancePath, DisplayInfo display)
     {
-        map.TryGetValue(instancePath, out var reported);
+        var reported = DisplayConnection.Unknown;
+        if (map.TryGetValue(instancePath, out var code))
+        {
+            display.ReportedTechnologyCode = code;
+            reported = TranslateOutputTechnology(code);
+            display.WindowsConnection = reported;
+        }
 
         if (display.EdidDigitalInput == false && reported != DisplayConnection.Internal)
         {

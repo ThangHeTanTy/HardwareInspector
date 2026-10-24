@@ -24,7 +24,9 @@ public static class ComponentModelSpecFactory
         ComponentKind.Memory => Memory(snapshot, assessment),
         ComponentKind.Storage => Storage(snapshot, 0),
         ComponentKind.Battery => Battery(snapshot),
-        ComponentKind.Display => Display(snapshot, PrimaryDisplayIndex(snapshot)),
+        // Mô hình ở góc trên là màn 1, khớp với dòng "Màn 1" đầu bảng thông số;
+        // màn 2 trở đi hiện ở dòng của chính nó, giống cách làm với ổ lưu trữ.
+        ComponentKind.Display => Display(snapshot, 0),
         ComponentKind.Motherboard => Board(snapshot),
         ComponentKind.Firmware => Firmware(snapshot),
         _ => new ComponentModelSpec(assessment.Kind)
@@ -52,7 +54,7 @@ public static class ComponentModelSpecFactory
     public static string? HeaderAnchor(SystemSnapshot snapshot, ComponentKind kind) => kind switch
     {
         ComponentKind.Storage when snapshot.StorageDevices.Count > 0 => "storage:0",
-        ComponentKind.Display when snapshot.Displays.Count > 0 => $"display:{PrimaryDisplayIndex(snapshot)}",
+        ComponentKind.Display when snapshot.Displays.Count > 0 => "display:0",
         _ => null
     };
 
@@ -84,12 +86,6 @@ public static class ComponentModelSpecFactory
                 .Select(i => Display(snapshot, i)).ToList(),
             Ratings = assessment.Components.GroupBy(c => c.Kind).ToDictionary(g => g.Key, g => g.First().Rating)
         };
-    }
-
-    private static int PrimaryDisplayIndex(SystemSnapshot snapshot)
-    {
-        var i = snapshot.Displays.FindIndex(d => d.IsPrimary);
-        return i >= 0 ? i : 0;
     }
 
     private static ComponentModelSpec Firmware(SystemSnapshot snapshot) => new(ComponentKind.Firmware)

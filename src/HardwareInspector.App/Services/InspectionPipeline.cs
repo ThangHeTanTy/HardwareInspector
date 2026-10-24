@@ -32,6 +32,9 @@ public sealed class InspectionPipeline : IDisposable
     /// </summary>
     public GpuTestResult? LastGpuTest { get; set; }
 
+    /// <summary>Chỉnh ảnh chụp trước khi chấm điểm — dùng để áp lựa chọn tay của người dùng.</summary>
+    public Action<SystemSnapshot>? BeforeAnalysis { get; set; }
+
     public InspectionPipeline()
     {
         SensorMonitor = new LibreHardwareSensorMonitor();
@@ -106,6 +109,7 @@ public sealed class InspectionPipeline : IDisposable
 
         ct.ThrowIfCancellationRequested();
         Report("Phân tích và chấm điểm", doneWeight);
+        BeforeAnalysis?.Invoke(snapshot);
 
         var assessment = await Task.Run(() => _assessmentService.Assess(snapshot), ct);
 
