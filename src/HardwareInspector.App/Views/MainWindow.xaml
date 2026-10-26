@@ -118,6 +118,10 @@
           <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
         <!-- Điểm tổng -->
         <Border Grid.Column="0" CornerRadius="10" Padding="22,14" MinWidth="128"
@@ -155,7 +159,25 @@
 
         <!-- Cảnh lắp ráp tổng thể: mọi linh kiện đọc được, đặt đúng chỗ và nối với nhau.
              Cột mốc trên mỗi linh kiện tô màu theo mức đánh giá của linh kiện đó. -->
-        <views:ComponentModelView Grid.Column="3" Width="340" Height="200" Margin="18,0,0,0"
+        <!-- Thông tin nhanh của máy. Chi tiết xem ở danh sách linh kiện. -->
+        <ItemsControl Grid.Row="1" Grid.ColumnSpan="3" Margin="0,14,0,0" ItemsSource="{Binding QuickFacts}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Columns="3" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Margin="0,0,16,10">
+                <TextBlock Text="{Binding Label}" Style="{StaticResource Eyebrow}" />
+                <TextBox Text="{Binding Value, Mode=OneWay}" Style="{StaticResource SelectableText}"
+                         Margin="0,2,0,0" />
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <views:ComponentModelView Grid.Column="3" Grid.RowSpan="2" Width="340" Height="200" Margin="18,0,0,0"
                                   VerticalAlignment="Center"
                                   Assembly="{Binding OverviewModel}" Rating="{Binding OverallRating}"
                                   ToolTip="{Binding [Verdict.Overview.Tip], Source={StaticResource Ui}}" />
@@ -304,8 +326,14 @@
                           <TextBlock Text="{Binding Title}" VerticalAlignment="Center"
                                      TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
                           <ComboBox Grid.Column="1" MinWidth="240"
-                                    ItemsSource="{Binding Options}" DisplayMemberPath="Label"
-                                    SelectedItem="{Binding Selected, Mode=TwoWay}" />
+                                    ItemsSource="{Binding Options}"
+                                    SelectedItem="{Binding Selected, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                              <DataTemplate>
+                                <TextBlock Text="{Binding Label}" />
+                              </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                          </ComboBox>
                         </Grid>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>

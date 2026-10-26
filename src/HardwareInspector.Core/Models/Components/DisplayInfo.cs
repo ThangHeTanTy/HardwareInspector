@@ -55,18 +55,6 @@ public sealed class DisplayInfo
 
     public bool ViaConverter => ReportedConnection is not null && ReportedConnection != Connection;
 
-    /// <summary>Mã VideoOutputTechnology thô Windows trả về, để hiển thị làm căn cứ.</summary>
-    public long? ReportedTechnologyCode { get; set; }
-
-    /// <summary>Cổng Windows báo (dịch từ <see cref="ReportedTechnologyCode"/>), giữ nguyên khi có chọn tay.</summary>
-    public DisplayConnection? WindowsConnection { get; set; }
-
-    /// <summary>Nơi đọc được EDID: "registry", "WMI", hoặc null khi không đọc được.</summary>
-    public string? EdidSource { get; set; }
-
-    /// <summary>Giá trị byte 20 của EDID (kiểu tín hiệu vào), để hiển thị làm căn cứ.</summary>
-    public byte? EdidInputByte { get; set; }
-
     // Kết quả tự nhận diện, giữ lại khi người dùng chọn tay để bỏ chọn thì trả về như cũ.
     private (DisplayConnection Connection, DisplayConnection? Reported)? _detected;
 

@@ -3,7 +3,11 @@ using HardwareInspector.Core.Models.Components;
 
 namespace HardwareInspector.App.ViewModels;
 
-public sealed record PortOption(DisplayConnection? Value, string Label);
+public sealed record PortOption(DisplayConnection? Value, string Label)
+{
+    // Ô chọn hiện mục đang chọn bằng ToString, nên trả về nhãn thay cho dạng record mặc định.
+    public override string ToString() => Label;
+}
 
 /// <summary>
 /// Ô chọn cổng thật của một màn hình. Dùng khi bộ chuyển đổi che mất kiểu cổng

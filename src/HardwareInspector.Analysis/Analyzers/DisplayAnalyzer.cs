@@ -56,12 +56,6 @@ public sealed class DisplayAnalyzer : IComponentAnalyzer
         var card = new ScoreCard(Kind, title);
 
         card.Metric("Cổng kết nối", display.ConnectionText, ConnectionNote(display))
-            .Metric("Căn cứ xác định cổng", ConnectionEvidence(display),
-                display.Connection is DisplayConnection.Internal or DisplayConnection.Vga || display.ConnectionSetByUser
-                    ? null
-                    : "Nếu màn thực tế cắm dây VGA mà vẫn báo cổng số: bộ chuyển đổi (adapter rời hoặc chip " +
-                      "chuyển đổi sau cổng VGA trên bo) đã thay EDID của màn bằng EDID tín hiệu số, nên phần mềm " +
-                      "không còn cách nào nhận ra. Chọn cổng thật ở mục \"Cổng thật của màn hình\" phía trên.")
             .Metric("Card xuất hình", display.AdapterDescription.OrDash())
             .Metric("Vai trò", display.IsPrimary ? "Màn hình chính" : "Màn hình phụ")
             .Metric("Độ phân giải đang chạy", display.Resolution)
@@ -119,23 +113,6 @@ public sealed class DisplayAnalyzer : IComponentAnalyzer
               "EDID của màn khai tín hiệu analog, nên cổng thật là VGA — đi qua adapter rời " +
               "hoặc chip chuyển đổi gắn sẵn sau cổng VGA trên bo mạch."
             : null;
-    }
-
-    /// <summary>
-    /// Hai nguồn dùng để xác định cổng, ghi ra nguyên giá trị để người dùng tự đối chiếu
-    /// khi kết quả không khớp với dây cắm thực tế.
-    /// </summary>
-    private static string ConnectionEvidence(DisplayInfo display)
-    {
-        var windows = display.ReportedTechnologyCode is { } code && display.WindowsConnection is { } reported
-            ? $"Windows báo {DisplayInfo.LongName(reported)} (mã {code})"
-            : "Windows không báo cổng";
-
-        var edid = display.EdidInputByte is { } b
-            ? $"EDID ({display.EdidSource}) khai tín hiệu {((b & 0x80) != 0 ? "số" : "analog")} (byte 20 = 0x{b:X2})"
-            : "không đọc được EDID";
-
-        return $"{windows} · {edid}";
     }
 
     private void AnalyzeAge(ScoreCard card, DisplayInfo display, SystemSnapshot snapshot)

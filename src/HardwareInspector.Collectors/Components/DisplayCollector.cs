@@ -69,11 +69,9 @@ public sealed class DisplayCollector : IInfoCollector
                 ApplyCurrentMode(display, adapter.DeviceName);
 
                 var instancePath = ExtractInstancePath(monitor.DeviceID);
-                var source = "registry";
                 var edid = ReadEdidFromRegistry(instancePath);
                 if (edid is null || !EdidParser.TryParse(edid, display))
                 {
-                    source = "WMI";
                     edid = LookupWmiEdid(wmiEdidMap, instancePath);
                     if (edid is not null && !EdidParser.TryParse(edid, display)) edid = null;
                 }
@@ -81,8 +79,6 @@ public sealed class DisplayCollector : IInfoCollector
                 if (edid is not null)
                 {
                     display.EdidAvailable = true;
-                    display.EdidSource = source;
-                    display.EdidInputByte = edid[20];
                 }
 
                 display.Connection = ResolveConnection(connectionMap, instancePath, display);
@@ -240,13 +236,9 @@ public sealed class DisplayCollector : IInfoCollector
     private static DisplayConnection ResolveConnection(
         Dictionary<string, long> map, string instancePath, DisplayInfo display)
     {
-        var reported = DisplayConnection.Unknown;
-        if (map.TryGetValue(instancePath, out var code))
-        {
-            display.ReportedTechnologyCode = code;
-            reported = TranslateOutputTechnology(code);
-            display.WindowsConnection = reported;
-        }
+        var reported = map.TryGetValue(instancePath, out var code)
+            ? TranslateOutputTechnology(code)
+            : DisplayConnection.Unknown;
 
         if (display.EdidDigitalInput == false && reported != DisplayConnection.Internal)
         {
