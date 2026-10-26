@@ -2,7 +2,7 @@ namespace HardwareInspector.Core.Models.Components;
 
 public sealed class GraphicsInfo
 {
-    public string Name { get; set; } = "Không xác định";
+    public string Name { get; set; } = string.Empty;
     public string Vendor { get; set; } = string.Empty;
     public string? PnpDeviceId { get; set; }
     public long VideoMemoryBytes { get; set; }

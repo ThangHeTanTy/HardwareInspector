@@ -47,9 +47,11 @@ public sealed class ComponentAuthenticityEngine
                 Code = "AUTH-CPU-000",
                 Component = ComponentKind.Cpu,
                 Severity = Severity.Notice,
-                Title = "Không đọc được chữ ký CPUID",
-                Detail = "Thiếu chữ ký này thì không thể kiểm chứng CPU có đúng như tên nó khai hay không. " +
-                         "Thường gặp trên nền tảng ARM hoặc khi chạy trong máy ảo có chặn CPUID.",
+                Title = S("Không đọc được chữ ký CPUID", "Could not read the CPUID signature"),
+                Detail = S("Thiếu chữ ký này thì không thể kiểm chứng CPU có đúng như tên nó khai hay không. " +
+                           "Thường gặp trên nền tảng ARM hoặc khi chạy trong máy ảo có chặn CPUID.",
+                           "Without this signature there is no way to verify the CPU is what its name claims. " +
+                           "Common on ARM platforms or inside VMs that block CPUID."),
                 Source = EvidenceSource.Wmi,
                 Confidence = 1.0
             };
@@ -65,16 +67,23 @@ public sealed class ComponentAuthenticityEngine
                 Code = "AUTH-CPU-001",
                 Component = ComponentKind.Cpu,
                 Severity = gap >= 2 ? Severity.Critical : Severity.Warning,
-                Title = $"CPU tự nhận thế hệ {claimed} nhưng silicon là thế hệ {actual}",
-                Detail =
+                Title = S($"CPU tự nhận thế hệ {claimed} nhưng silicon là thế hệ {actual}", $"CPU claims generation {claimed} but the silicon is generation {actual}"),
+                Detail = S(
                     $"Tên đang hiển thị: \"{cpu.Name}\" — tức là {cpu.ClaimedModelNumber ?? "không rõ model"}, thế hệ {claimed}.\n" +
                     $"Chữ ký CPUID đọc trực tiếp từ chip: {sig.SignatureText}, tương ứng vi kiến trúc " +
                     $"{cpu.ActualMicroarchitecture ?? "không rõ"} — thế hệ {actual}.\n\n" +
                     "Family và Model trong CPUID nằm trong chính silicon nên không sửa được bằng phần mềm. " +
                     "Khi cái tên và chữ ký mâu thuẫn, cái tên là thứ đã bị thay đổi.",
-                Recommendation =
+                    $"Displayed name: \"{cpu.Name}\" — that is {cpu.ClaimedModelNumber ?? "unknown model"}, generation {claimed}.\n" +
+                    $"CPUID signature read directly from the chip: {sig.SignatureText}, matching the " +
+                    $"{cpu.ActualMicroarchitecture ?? "unknown"} microarchitecture — generation {actual}.\n\n" +
+                    "Family and Model in CPUID live in the silicon and cannot be changed by software. " +
+                    "When the name and the signature disagree, it is the name that was changed."),
+                Recommendation = S(
                     "Đối chiếu bằng công cụ độc lập: CPU-Z hiển thị cả tên lẫn Family/Model/Stepping ở cùng một chỗ. " +
                     "Nếu xác nhận lệch thế hệ, đây là hàng khai man — dừng giao dịch.",
+                    "Cross-check with an independent tool: CPU-Z shows the name and Family/Model/Stepping side by side. " +
+                    "If the generation mismatch is confirmed, the part is misrepresented — stop the deal."),
                 Source = EvidenceSource.Wmi,
                 ScorePenalty = gap >= 2 ? 55 : 30,
                 Confidence = gap >= 2 ? 0.9 : 0.65,
@@ -102,13 +111,18 @@ public sealed class ComponentAuthenticityEngine
                 Code = "AUTH-CPU-002",
                 Component = ComponentKind.Cpu,
                 Severity = Severity.Critical,
-                Title = "Tên CPU trong BIOS khác tên do chính CPU báo về",
-                Detail =
+                Title = S("Tên CPU trong BIOS khác tên do chính CPU báo về", "The CPU name in the BIOS differs from what the CPU itself reports"),
+                Detail = S(
                     $"SMBIOS Type 4 (do BIOS cung cấp, sửa được): \"{cpu.SmbiosProcessorVersion}\"\n" +
                     $"CPUID brand string (do chip cung cấp): \"{brand}\"\n\n" +
                     "Trên máy nguyên bản, hai chuỗi này luôn khớp vì BIOS chỉ chép lại chuỗi từ CPUID. " +
                     "Lệch nhau nghĩa là có người đã ghi tay vào bảng SMBIOS.",
-                Recommendation = "Đây là bằng chứng trực tiếp của việc can thiệp BIOS. Không nhận máy.",
+                    $"SMBIOS Type 4 (from the BIOS, editable): \"{cpu.SmbiosProcessorVersion}\"\n" +
+                    $"CPUID brand string (from the chip): \"{brand}\"\n\n" +
+                    "On an original machine these always match because the BIOS just copies the CPUID string. " +
+                    "A mismatch means someone wrote into the SMBIOS table by hand."),
+                Recommendation = S("Đây là bằng chứng trực tiếp của việc can thiệp BIOS. Không nhận máy.",
+                                   "This is direct evidence of BIOS tampering. Do not accept the machine."),
                 Source = EvidenceSource.Smbios,
                 ScorePenalty = 50,
                 Confidence = 0.85
@@ -125,13 +139,16 @@ public sealed class ComponentAuthenticityEngine
                 Code = "AUTH-CPU-003",
                 Component = ComponentKind.Cpu,
                 Severity = Severity.Warning,
-                Title = "Tên CPU trong registry khác chuỗi CPUID hiện tại",
-                Detail =
-                    $"Registry: \"{cpu.RegistryProcessorName}\"\nCPUID: \"{brand}\"\n\n" +
+                Title = S("Tên CPU trong registry khác chuỗi CPUID hiện tại", "The CPU name in the registry differs from the current CPUID string"),
+                Detail = $"Registry: \"{cpu.RegistryProcessorName}\"\nCPUID: \"{brand}\"\n\n" + S(
                     "Windows ghi giá trị registry một lần lúc khởi động. Hai chuỗi lệch nhau " +
                     "hoặc do CPU vừa được thay mà chưa khởi động lại, hoặc do registry đã bị sửa tay " +
                     "để đánh lừa các công cụ đọc từ đó.",
-                Recommendation = "Khởi động lại máy rồi chạy lại. Nếu vẫn lệch, giá trị registry đã bị can thiệp.",
+                    "Windows writes the registry value once at boot. A mismatch means " +
+                    "either the CPU was just swapped without a reboot, or the registry was edited by hand " +
+                    "to fool tools that read from it."),
+                Recommendation = S("Khởi động lại máy rồi chạy lại. Nếu vẫn lệch, giá trị registry đã bị can thiệp.",
+                                   "Restart the machine and run again. If it still differs, the registry value was tampered with."),
                 Source = EvidenceSource.Registry,
                 ScorePenalty = 25,
                 Confidence = 0.7
@@ -147,11 +164,14 @@ public sealed class ComponentAuthenticityEngine
                 Code = "AUTH-CPU-004",
                 Component = ComponentKind.Cpu,
                 Severity = Severity.Notice,
-                Title = "Số luồng theo CPUID lệch nhiều so với số Windows báo",
-                Detail = $"CPUID leaf 1: {sig.LogicalProcessorsFromCpuId} luồng. Windows: {cpu.LogicalCores} luồng. " +
-                         "Chênh lệch nhỏ là bình thường vì leaf 1 báo số luồng tối đa của gói chứ không phải số đang bật, " +
-                         "nhưng chênh lệch lớn cần xem lại.",
-                Recommendation = "Kiểm tra xem có nhân nào bị tắt trong BIOS không.",
+                Title = S("Số luồng theo CPUID lệch nhiều so với số Windows báo", "CPUID thread count differs a lot from what Windows reports"),
+                Detail = S($"CPUID leaf 1: {sig.LogicalProcessorsFromCpuId} luồng. Windows: {cpu.LogicalCores} luồng. " +
+                           "Chênh lệch nhỏ là bình thường vì leaf 1 báo số luồng tối đa của gói chứ không phải số đang bật, " +
+                           "nhưng chênh lệch lớn cần xem lại.",
+                           $"CPUID leaf 1: {sig.LogicalProcessorsFromCpuId} threads. Windows: {cpu.LogicalCores} threads. " +
+                           "A small difference is normal because leaf 1 reports the package maximum rather than what is enabled, " +
+                           "but a large one deserves a look."),
+                Recommendation = S("Kiểm tra xem có nhân nào bị tắt trong BIOS không.", "Check whether any cores are disabled in the BIOS."),
                 Source = EvidenceSource.Wmi,
                 ScorePenalty = 6,
                 Confidence = 0.4
@@ -170,14 +190,17 @@ public sealed class ComponentAuthenticityEngine
                 Component = ComponentKind.Cpu,
                 Severity = isVm ? Severity.Warning : Severity.Info,
                 Title = isVm
-                    ? "Hệ thống đang chạy trong máy ảo"
-                    : "Có lớp ảo hoá của Windows đang hoạt động (Hyper-V/VBS)",
+                    ? S("Hệ thống đang chạy trong máy ảo", "The system is running inside a virtual machine")
+                    : S("Có lớp ảo hoá của Windows đang hoạt động (Hyper-V/VBS)", "A Windows virtualization layer is active (Hyper-V/VBS)"),
                 Detail = $"Hypervisor vendor: \"{sig.HypervisorVendor}\". " +
                          (isVm
-                             ? "Trong máy ảo, gần như toàn bộ thông tin phần cứng đều do lớp ảo hoá dựng ra. " +
-                               "Kết quả kiểm tra không phản ánh phần cứng thật."
-                             : "Đây là hành vi bình thường khi bật bảo mật dựa trên ảo hoá."),
-                Recommendation = isVm ? "Chạy ứng dụng trực tiếp trên máy thật để có kết quả có ý nghĩa." : null,
+                             ? S("Trong máy ảo, gần như toàn bộ thông tin phần cứng đều do lớp ảo hoá dựng ra. " +
+                                 "Kết quả kiểm tra không phản ánh phần cứng thật.",
+                                 "Inside a VM almost all hardware information is synthesized by the hypervisor. " +
+                                 "The results do not reflect real hardware.")
+                             : S("Đây là hành vi bình thường khi bật bảo mật dựa trên ảo hoá.",
+                                 "This is normal when virtualization-based security is enabled.")),
+                Recommendation = isVm ? S("Chạy ứng dụng trực tiếp trên máy thật để có kết quả có ý nghĩa.", "Run the app directly on the real machine for meaningful results.") : null,
                 Source = EvidenceSource.Wmi,
                 ScorePenalty = isVm ? 20 : 0,
                 Confidence = 0.9
@@ -194,9 +217,11 @@ public sealed class ComponentAuthenticityEngine
                     Code = "AUTH-CPU-006",
                     Component = ComponentKind.Cpu,
                     Severity = Severity.Notice,
-                    Title = "Xung nhịp tối đa Windows báo lệch nhiều so với CPUID",
-                    Detail = $"Windows (từ SMBIOS): {cpu.MaxClockMhz} MHz. CPUID leaf 0x16: {sig.MaxFrequencyMhz} MHz. " +
-                             "Giá trị SMBIOS do BIOS ghi và hay bị điền sai; giá trị CPUID đến từ chip.",
+                    Title = S("Xung nhịp tối đa Windows báo lệch nhiều so với CPUID", "The max clock Windows reports differs a lot from CPUID"),
+                    Detail = S($"Windows (từ SMBIOS): {cpu.MaxClockMhz} MHz. CPUID leaf 0x16: {sig.MaxFrequencyMhz} MHz. " +
+                               "Giá trị SMBIOS do BIOS ghi và hay bị điền sai; giá trị CPUID đến từ chip.",
+                               $"Windows (from SMBIOS): {cpu.MaxClockMhz} MHz. CPUID leaf 0x16: {sig.MaxFrequencyMhz} MHz. " +
+                               "The SMBIOS value is written by the BIOS and often wrong; the CPUID value comes from the chip."),
                     Source = EvidenceSource.Smbios,
                     ScorePenalty = 5,
                     Confidence = 0.5
@@ -232,14 +257,21 @@ public sealed class ComponentAuthenticityEngine
                     Code = "AUTH-RAM-001",
                     Component = ComponentKind.Memory,
                     Severity = Severity.Warning,
-                    Title = "Tổng dung lượng các thanh RAM không khớp bộ nhớ hệ thống",
-                    Detail = $"Cộng dung lượng từng thanh trong SMBIOS: {declared / 1024 / 1024 / 1024.0:0.#} GB. " +
-                             $"Bộ nhớ hệ thống thực nhận: {mem.TotalPhysicalBytes / 1024 / 1024 / 1024.0:0.#} GB.\n\n" +
-                             "Thông tin từng thanh nằm trong SMBIOS Type 17 do BIOS cung cấp nên sửa được; " +
-                             "tổng bộ nhớ hệ thống thì đến từ bộ điều khiển bộ nhớ. Lệch nhau nghĩa là " +
-                             "bảng mô tả RAM đã bị ghi sai, hoặc có thanh RAM lỗi không được nhận đủ.",
-                    Recommendation = "Kiểm tra lại bằng Task Manager và CPU-Z tab SPD. " +
-                                     "Nếu thiếu dung lượng thật thì có thanh RAM đang lỗi.",
+                    Title = S("Tổng dung lượng các thanh RAM không khớp bộ nhớ hệ thống", "The modules' total capacity does not match system memory"),
+                    Detail = S($"Cộng dung lượng từng thanh trong SMBIOS: {declared / 1024 / 1024 / 1024.0:0.#} GB. " +
+                               $"Bộ nhớ hệ thống thực nhận: {mem.TotalPhysicalBytes / 1024 / 1024 / 1024.0:0.#} GB.\n\n" +
+                               "Thông tin từng thanh nằm trong SMBIOS Type 17 do BIOS cung cấp nên sửa được; " +
+                               "tổng bộ nhớ hệ thống thì đến từ bộ điều khiển bộ nhớ. Lệch nhau nghĩa là " +
+                               "bảng mô tả RAM đã bị ghi sai, hoặc có thanh RAM lỗi không được nhận đủ.",
+                               $"Sum of module capacities in SMBIOS: {declared / 1024 / 1024 / 1024.0:0.#} GB. " +
+                               $"System memory actually recognised: {mem.TotalPhysicalBytes / 1024 / 1024 / 1024.0:0.#} GB.\n\n" +
+                               "Per-module data lives in SMBIOS Type 17, supplied by the BIOS and editable; " +
+                               "total system memory comes from the memory controller. A mismatch means " +
+                               "the memory table was written incorrectly, or a faulty module is not fully recognised."),
+                    Recommendation = S("Kiểm tra lại bằng Task Manager và CPU-Z tab SPD. " +
+                                       "Nếu thiếu dung lượng thật thì có thanh RAM đang lỗi.",
+                                       "Check again with Task Manager and CPU-Z's SPD tab. " +
+                                       "If real capacity is missing, a module is faulty."),
                     Source = EvidenceSource.Smbios,
                     ScorePenalty = 25,
                     Confidence = 0.75
@@ -258,10 +290,14 @@ public sealed class ComponentAuthenticityEngine
                 Code = "AUTH-RAM-002",
                 Component = ComponentKind.Memory,
                 Severity = Severity.Notice,
-                Title = $"{anonymous}/{mem.Modules.Count} thanh RAM không có thông tin hãng và mã sản phẩm",
-                Detail = "Thanh RAM chính hãng luôn ghi mã nhà sản xuất trong chip SPD. " +
-                         "Trống hoàn toàn thường gặp ở RAM tháo máy không rõ nguồn hoặc RAM đã bị ghi lại SPD.",
-                Recommendation = "Mở CPU-Z tab SPD để xem trực tiếp nội dung chip SPD của từng khe.",
+                Title = S($"{anonymous}/{mem.Modules.Count} thanh RAM không có thông tin hãng và mã sản phẩm",
+                          $"{anonymous}/{mem.Modules.Count} memory module(s) have no vendor or part number"),
+                Detail = S("Thanh RAM chính hãng luôn ghi mã nhà sản xuất trong chip SPD. " +
+                           "Trống hoàn toàn thường gặp ở RAM tháo máy không rõ nguồn hoặc RAM đã bị ghi lại SPD.",
+                           "Genuine modules always store the manufacturer code in the SPD chip. " +
+                           "A blank SPD is typical of pulled modules of unknown origin or modules with rewritten SPD."),
+                Recommendation = S("Mở CPU-Z tab SPD để xem trực tiếp nội dung chip SPD của từng khe.",
+                                   "Open CPU-Z's SPD tab to read each slot's SPD chip directly."),
                 Source = EvidenceSource.Smbios,
                 ScorePenalty = 8,
                 Confidence = 0.6
@@ -284,12 +320,17 @@ public sealed class ComponentAuthenticityEngine
                         Code = "AUTH-SSD-001",
                         Component = ComponentKind.Storage,
                         Severity = Severity.Warning,
-                        Title = $"Ổ khai {tb:0.#} TB nhưng không phản hồi lệnh S.M.A.R.T.",
-                        Detail = "Ổ dung lượng lớn mà controller không hỗ trợ tập lệnh chuẩn là tổ hợp " +
-                                 "hay gặp ở ổ giả dung lượng — loại dùng firmware sửa để báo dung lượng " +
-                                 "gấp nhiều lần dung lượng NAND thật.",
-                        Recommendation = "Kiểm tra bằng H2testw hoặc F3: ghi đầy ổ bằng dữ liệu kiểm chứng rồi đọc lại. " +
-                                         "Đây là cách duy nhất chắc chắn phát hiện ổ giả dung lượng.",
+                        Title = S($"Ổ khai {tb:0.#} TB nhưng không phản hồi lệnh S.M.A.R.T.", $"Drive claims {tb:0.#} TB but does not answer S.M.A.R.T. commands"),
+                        Detail = S("Ổ dung lượng lớn mà controller không hỗ trợ tập lệnh chuẩn là tổ hợp " +
+                                   "hay gặp ở ổ giả dung lượng — loại dùng firmware sửa để báo dung lượng " +
+                                   "gấp nhiều lần dung lượng NAND thật.",
+                                   "A large drive whose controller does not support the standard command set is a typical " +
+                                   "sign of a fake-capacity drive — one with modified firmware reporting " +
+                                   "many times its real NAND capacity."),
+                        Recommendation = S("Kiểm tra bằng H2testw hoặc F3: ghi đầy ổ bằng dữ liệu kiểm chứng rồi đọc lại. " +
+                                           "Đây là cách duy nhất chắc chắn phát hiện ổ giả dung lượng.",
+                                           "Test with H2testw or F3: fill the drive with verifiable data and read it back. " +
+                                           "This is the only sure way to catch a fake-capacity drive."),
                         Source = EvidenceSource.SmartAta,
                         ScorePenalty = 20,
                         Confidence = 0.5
@@ -303,11 +344,15 @@ public sealed class ComponentAuthenticityEngine
                     Code = "AUTH-SSD-002",
                     Component = ComponentKind.Storage,
                     Severity = Severity.Notice,
-                    Title = "Ổ được khai là SSD nhưng báo có tốc độ vòng quay",
-                    Detail = $"Model \"{d.Model}\" báo {d.SpindleSpeedRpm} vòng/phút. " +
-                             "SSD không có bộ phận quay. Thường là ổ cơ được đổi tên model, " +
-                             "hoặc ổ lai SSHD bị mô tả không chính xác.",
-                    Recommendation = "Chạy bài đo tốc độ ngẫu nhiên: ổ cơ có độ trễ truy cập cao hơn SSD hàng chục lần.",
+                    Title = S("Ổ được khai là SSD nhưng báo có tốc độ vòng quay", "Drive is declared as an SSD but reports a spindle speed"),
+                    Detail = S($"Model \"{d.Model}\" báo {d.SpindleSpeedRpm} vòng/phút. " +
+                               "SSD không có bộ phận quay. Thường là ổ cơ được đổi tên model, " +
+                               "hoặc ổ lai SSHD bị mô tả không chính xác.",
+                               $"Model \"{d.Model}\" reports {d.SpindleSpeedRpm} rpm. " +
+                               "SSDs have no spinning parts. Usually a hard disk with a renamed model, " +
+                               "or a hybrid SSHD described inaccurately."),
+                    Recommendation = S("Chạy bài đo tốc độ ngẫu nhiên: ổ cơ có độ trễ truy cập cao hơn SSD hàng chục lần.",
+                                       "Run a random-access benchmark: hard disks have tens of times the access latency of SSDs."),
                     Source = EvidenceSource.Wmi,
                     ScorePenalty = 15,
                     Confidence = 0.6
@@ -346,10 +391,13 @@ public sealed class ComponentAuthenticityEngine
                     Code = "AUTH-GPU-001",
                     Component = ComponentKind.Gpu,
                     Severity = Severity.Warning,
-                    Title = "Tên card không khớp mã nhà sản xuất trên bus PCI",
-                    Detail = $"PCI vendor ID {vendorId} tương ứng {expectedVendor}, " +
-                             $"nhưng tên hiển thị là \"{gpu.Name}\" của {gpu.Vendor}.",
-                    Recommendation = "Đối chiếu mã VEN/DEV trên trang tra cứu PCI ID để biết card thật là gì.",
+                    Title = S("Tên card không khớp mã nhà sản xuất trên bus PCI", "The card name does not match the vendor code on the PCI bus"),
+                    Detail = S($"PCI vendor ID {vendorId} tương ứng {expectedVendor}, " +
+                               $"nhưng tên hiển thị là \"{gpu.Name}\" của {gpu.Vendor}.",
+                               $"PCI vendor ID {vendorId} belongs to {expectedVendor}, " +
+                               $"but the displayed name is \"{gpu.Name}\" from {gpu.Vendor}."),
+                    Recommendation = S("Đối chiếu mã VEN/DEV trên trang tra cứu PCI ID để biết card thật là gì.",
+                                       "Look up the VEN/DEV codes on a PCI ID site to find out what the card really is."),
                     Source = EvidenceSource.Wmi,
                     ScorePenalty = 25,
                     Confidence = 0.7,
@@ -367,11 +415,15 @@ public sealed class ComponentAuthenticityEngine
                 Code = "AUTH-GPU-002",
                 Component = ComponentKind.Gpu,
                 Severity = Severity.Info,
-                Title = $"Mã phần cứng card: PCI\\VEN_{vendorId}&DEV_{deviceId}",
-                Detail = "Mã này đọc từ thanh ghi cấu hình PCI. Tra nó trên trang PCI ID để biết " +
-                         "model thật của card, độc lập với tên mà driver hiển thị. " +
-                         "Card bị flash vBIOS của model cao hơn vẫn giữ nguyên phần lớn đặc điểm phần cứng, " +
-                         "nên hãy so thêm dung lượng VRAM và độ rộng bus nhớ với thông số chính thức.",
+                Title = S($"Mã phần cứng card: PCI\\VEN_{vendorId}&DEV_{deviceId}", $"Card hardware ID: PCI\\VEN_{vendorId}&DEV_{deviceId}"),
+                Detail = S("Mã này đọc từ thanh ghi cấu hình PCI. Tra nó trên trang PCI ID để biết " +
+                           "model thật của card, độc lập với tên mà driver hiển thị. " +
+                           "Card bị flash vBIOS của model cao hơn vẫn giữ nguyên phần lớn đặc điểm phần cứng, " +
+                           "nên hãy so thêm dung lượng VRAM và độ rộng bus nhớ với thông số chính thức.",
+                           "This ID is read from the PCI configuration registers. Look it up on a PCI ID site to find " +
+                           "the card's real model, independent of the name the driver shows. " +
+                           "A card flashed with a higher model's vBIOS keeps most of its hardware traits, " +
+                           "so also compare VRAM size and memory bus width with the official specs."),
                 Source = EvidenceSource.Wmi,
                 Confidence = 1.0
             };

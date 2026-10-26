@@ -2,12 +2,13 @@ using HardwareInspector.Collectors.Wmi;
 using HardwareInspector.Core.Abstractions;
 using HardwareInspector.Core.Models;
 using HardwareInspector.Core.Models.Components;
+using static HardwareInspector.Core.Localization.Loc;
 
 namespace HardwareInspector.Collectors.Components;
 
 public sealed class MemoryCollector : IInfoCollector
 {
-    public string Name => "Bộ nhớ RAM";
+    public string Name => S("Bộ nhớ RAM", "Memory");
     public int Order => 30;
 
     public Task CollectAsync(SystemSnapshot snapshot, CancellationToken ct = default)
@@ -48,7 +49,7 @@ public sealed class MemoryCollector : IInfoCollector
             .Query("SELECT MemoryErrorCorrection FROM Win32_PhysicalMemoryArray")
             .Any(a => a.Int("MemoryErrorCorrection") is 4 or 5 or 6);
 
-        mem.ChannelConfiguration = DeduceChannels(mem);
+        mem.ChannelGroups = CountChannels(mem);
         return Task.CompletedTask;
     }
 
@@ -61,10 +62,10 @@ public sealed class MemoryCollector : IInfoCollector
     /// giống hệt nhau. Chỉ dò chữ "ChannelA/ChannelB" sẽ kết luận ngược hoàn toàn.
     /// Vì vậy khoá phân biệt phải ghép cả số hiệu bộ điều khiển lẫn tên kênh.
     /// </summary>
-    private static string DeduceChannels(MemorySubsystemInfo mem)
+    private static int CountChannels(MemorySubsystemInfo mem)
     {
-        if (mem.Modules.Count == 0) return "Không đọc được";
-        if (mem.Modules.Count == 1) return "Single channel (1 thanh)";
+        if (mem.Modules.Count == 0) return 0;
+        if (mem.Modules.Count == 1) return 1;
 
         var tokens = mem.Modules
             .Select(m => ExtractChannelToken(m.DeviceLocator, m.BankLabel))
@@ -72,16 +73,11 @@ public sealed class MemoryCollector : IInfoCollector
 
         // Không nhãn nào cho biết kênh: nói thẳng là không xác định được,
         // thay vì đoán rồi cảnh báo nhầm.
-        if (tokens.All(string.IsNullOrEmpty))
-            return $"Không xác định được từ nhãn khe ({mem.Modules.Count} thanh)";
+        if (tokens.All(string.IsNullOrEmpty)) return 0;
 
-        var distinct = tokens.Where(t => !string.IsNullOrEmpty(t))
-                             .Distinct(StringComparer.OrdinalIgnoreCase)
-                             .Count();
-
-        return distinct >= 2
-            ? $"Dual/Multi channel ({mem.Modules.Count} thanh, {distinct} kênh)"
-            : $"Cùng một kênh ({mem.Modules.Count} thanh) — kiểm tra lại vị trí cắm";
+        return tokens.Where(t => !string.IsNullOrEmpty(t))
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .Count();
     }
 
     /// <summary>
@@ -122,7 +118,7 @@ public sealed class MemoryCollector : IInfoCollector
         8 => "DIMM",
         12 => "SODIMM",
         13 => "SRIMM",
-        _ => "Khác"
+        _ => string.Empty
     };
 
     private static string TranslateMemoryType(int code) => code switch
@@ -133,6 +129,6 @@ public sealed class MemoryCollector : IInfoCollector
         26 => "DDR4",
         34 => "DDR5",
         35 => "LPDDR5",
-        _ => "Không xác định"
+        _ => string.Empty
     };
 }

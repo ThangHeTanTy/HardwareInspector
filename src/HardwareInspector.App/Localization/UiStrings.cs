@@ -152,6 +152,28 @@ public sealed class UiStrings : INotifyPropertyChanged
         ["Copy.Specs"] = new("THÔNG SỐ", "SPECIFICATIONS"),
         ["Copy.Sensors"] = new("CẢM BIẾN (min / trung bình / max)", "SENSORS (min / average / max)"),
         ["Copy.Findings"] = new("PHÁT HIỆN", "FINDINGS"),
-        ["Copy.Action"] = new("Nên làm", "What to do")
+        ["Copy.Action"] = new("Nên làm", "What to do"),
+
+        // --- Cửa sổ ---
+        ["Menu.Copy"] = new("Sao chép", "Copy"),
+        ["Menu.SelectAll"] = new("Chọn tất cả", "Select all"),
+        ["Window.Title"] = new("Hardware Inspector — Thẩm định phần cứng", "Hardware Inspector — Hardware inspection"),
+        ["Verdict.NotChecked"] = new("Chưa kiểm tra", "Not checked"),
+        ["Msg.Unexpected"] = new(
+            "Đã xảy ra lỗi ngoài dự kiến:\n\n{0}\n\nỨng dụng vẫn tiếp tục chạy, nhưng kết quả của bước vừa rồi có thể không đầy đủ.",
+            "An unexpected error occurred:\n\n{0}\n\nThe app keeps running, but the results of the last step may be incomplete."),
+        ["Msg.VmInitFailed"] = new("Không khởi tạo được ViewModel.\n\n", "Could not initialise the ViewModel.\n\n"),
+
+        // --- Kiểm tra màn hình ---
+        ["Screen.Title"] = new("Kiểm tra màn hình", "Display test"),
+        ["Screen.Intro"] = new(
+            "Tắt bớt đèn phòng trước khi bắt đầu. Nhìn sát màn hình khoảng 30 cm và quét mắt theo từng vùng.",
+            "Dim the room lights before you start. Look at the screen from about 30 cm and scan it area by area."),
+        ["Screen.Keys"] = new(
+            "Chuột trái hoặc phím Cách: bài kế tiếp · Backspace: bài trước · G: bật/tắt lưới soi vùng · H: ẩn bảng này · Esc: thoát",
+            "Left click or Space: next test · Backspace: previous · G: toggle inspection grid · H: hide this panel · Esc: exit"),
+        ["Screen.Target"] = new("Đang kiểm tra: {0}", "Testing: {0}"),
+        ["Screen.TargetPrimary"] = new("Đang kiểm tra màn hình chính", "Testing the primary display"),
+        ["Screen.Counter"] = new("Bài {0}/{1}", "Test {0}/{1}")
     };
 }

@@ -2,6 +2,7 @@ using HardwareInspector.Core.Abstractions;
 using HardwareInspector.Core.Models;
 using HardwareInspector.Core.Models.Components;
 using HardwareInspector.Firmware.Smbios;
+using static HardwareInspector.Core.Localization.Loc;
 
 namespace HardwareInspector.Firmware.Upgrade;
 
@@ -16,7 +17,7 @@ namespace HardwareInspector.Firmware.Upgrade;
 /// </summary>
 public sealed class UpgradeCapabilityCollector : IInfoCollector
 {
-    public string Name => "Khả năng nâng cấp";
+    public string Name => S("Khả năng nâng cấp", "Upgrade capability");
     public int Order => 70;
 
     public Task CollectAsync(SystemSnapshot snapshot, CancellationToken ct = default)
@@ -84,7 +85,7 @@ public sealed class UpgradeCapabilityCollector : IInfoCollector
             upgrade.MaxMemoryBytes = (long)maxCapacityKb * 1024;
 
         upgrade.MemorySlotsTotal = BitConverter.ToUInt16(d, 0x0D);
-        upgrade.MemoryErrorCorrection = TranslateErrorCorrection(d[0x06]);
+        upgrade.MemoryErrorCorrectionCode = d[0x06];
     }
 
     /// <summary>
@@ -104,7 +105,6 @@ public sealed class UpgradeCapabilityCollector : IInfoCollector
                 Designation = s.GetString(d[0x10]),
                 BankLabel = s.GetString(d[0x11]),
                 FormFactorCode = d[0x0E],
-                FormFactor = TranslateFormFactor(d[0x0E]),
                 MemoryType = TranslateMemoryType(d[0x12])
             };
 
@@ -220,27 +220,6 @@ public sealed class UpgradeCapabilityCollector : IInfoCollector
         if (n.Contains("USB") || connector == 0x12 || portType == 0x10) return PortKind.UsbA;
         return PortKind.Other;
     }
-
-    private static string TranslateErrorCorrection(byte code) => code switch
-    {
-        3 => "Không có",
-        4 => "Parity",
-        5 => "ECC một bit",
-        6 => "ECC nhiều bit",
-        7 => "CRC",
-        _ => "Không xác định"
-    };
-
-    private static string TranslateFormFactor(byte code) => code switch
-    {
-        0x08 => "DIMM",
-        0x09 => "TSOP",
-        0x0B => "RIMM",
-        0x0C => "SIMM",
-        0x0D => "SODIMM",
-        0x0F => "Chip hàn trên bo",
-        _ => "Khác"
-    };
 
     private static string TranslateMemoryType(byte code) => code switch
     {

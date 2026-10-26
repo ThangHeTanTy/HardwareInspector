@@ -32,7 +32,7 @@ public sealed class BatteryCollector : IInfoCollector
                 Name = mo.Str("Name"),
                 Chemistry = TranslateChemistry(mo.Int("Chemistry", -1)),
                 ChargeRemainingPercent = mo.Int("EstimatedChargeRemaining"),
-                PowerState = TranslateStatus(mo.Int("BatteryStatus", -1)),
+                PowerStateCode = mo.Int("BatteryStatus", -1),
                 VoltageV = mo.Long("DesignVoltage") / 1000d
             };
 
@@ -44,7 +44,7 @@ public sealed class BatteryCollector : IInfoCollector
         }
 
         if (snapshot.Batteries.Count == 0)
-            snapshot.Batteries.Add(new BatteryInfo { IsPresent = false, Name = "Không có pin (máy bàn)" });
+            snapshot.Batteries.Add(new BatteryInfo { IsPresent = false });
 
         return Task.CompletedTask;
     }
@@ -98,18 +98,6 @@ public sealed class BatteryCollector : IInfoCollector
         6 => "Lithium-ion",
         7 => "Zinc Air",
         8 => "Lithium Polymer",
-        _ => "Không xác định"
-    };
-
-    private static string TranslateStatus(int code) => code switch
-    {
-        1 => "Đang xả",
-        2 => "Cắm sạc (AC)",
-        3 => "Đã đầy",
-        4 => "Yếu",
-        5 => "Rất yếu",
-        6 => "Đang sạc",
-        11 => "Đang sạc, mức cao",
-        _ => "Không xác định"
+        _ => string.Empty
     };
 }

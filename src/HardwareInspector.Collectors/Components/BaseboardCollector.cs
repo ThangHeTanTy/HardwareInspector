@@ -3,12 +3,13 @@ using HardwareInspector.Collectors.Wmi;
 using HardwareInspector.Core.Abstractions;
 using HardwareInspector.Core.Models;
 using HardwareInspector.Core.Models.Components;
+using static HardwareInspector.Core.Localization.Loc;
 
 namespace HardwareInspector.Collectors.Components;
 
 public sealed class BaseboardCollector : IInfoCollector
 {
-    public string Name => "Bo mạch, BIOS và hệ điều hành";
+    public string Name => S("Bo mạch, BIOS và hệ điều hành", "Motherboard, BIOS and OS");
     public int Order => 5;
 
     public Task CollectAsync(SystemSnapshot snapshot, CancellationToken ct = default)
@@ -61,7 +62,7 @@ public sealed class BaseboardCollector : IInfoCollector
 
         b.ChassisSerialNumber = mo.Str("SerialNumber");
         b.ChassisAssetTag = mo.Str("SMBIOSAssetTag");
-        b.ChassisSecurityStatus = TranslateSecurityStatus(mo.Int("SecurityStatus", -1));
+        b.ChassisSecurityCode = mo.Int("SecurityStatus", -1);
 
         try
         {
@@ -143,16 +144,6 @@ public sealed class BaseboardCollector : IInfoCollector
         catch { return false; }
     }
 
-    private static string TranslateSecurityStatus(int code) => code switch
-    {
-        1 => "Khác",
-        2 => "Không xác định",
-        3 => "An toàn (chưa ghi nhận mở vỏ)",
-        4 => "Có khoá ngoài",
-        5 => "Đã bị mở vỏ / khoá bị vô hiệu",
-        _ => "Không xác định"
-    };
-
     private static string TranslateChassis(ushort code) => code switch
     {
         3 => "Desktop",
@@ -169,6 +160,6 @@ public sealed class BaseboardCollector : IInfoCollector
         30 => "Tablet",
         31 => "Convertible",
         32 => "Detachable",
-        _ => $"Loại {code}"
+        _ => $"Type {code}"
     };
 }

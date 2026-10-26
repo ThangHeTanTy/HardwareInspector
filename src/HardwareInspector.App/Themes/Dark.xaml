@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:loc="clr-namespace:HardwareInspector.App.Localization">
 
   <!-- Bảng màu tối, tương phản cao. Chọn tông xám lạnh vì công cụ này
        thường được dùng trong cửa hàng dưới đèn huỳnh quang, nơi nền trắng gây chói. -->
@@ -338,8 +339,8 @@
     <Setter Property="ContextMenu">
       <Setter.Value>
         <ContextMenu>
-          <MenuItem Command="Copy" Header="Sao chép" />
-          <MenuItem Command="SelectAll" Header="Chọn tất cả" />
+          <MenuItem Command="Copy" Header="{Binding [Menu.Copy], Source={x:Static loc:UiStrings.Instance}}" />
+          <MenuItem Command="SelectAll" Header="{Binding [Menu.SelectAll], Source={x:Static loc:UiStrings.Instance}}" />
         </ContextMenu>
       </Setter.Value>
     </Setter>

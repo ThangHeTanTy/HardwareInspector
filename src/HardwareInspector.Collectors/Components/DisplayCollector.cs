@@ -5,6 +5,7 @@ using HardwareInspector.Core.Abstractions;
 using HardwareInspector.Core.Models;
 using HardwareInspector.Core.Models.Components;
 using Microsoft.Win32;
+using static HardwareInspector.Core.Localization.Loc;
 
 namespace HardwareInspector.Collectors.Components;
 
@@ -18,7 +19,7 @@ namespace HardwareInspector.Collectors.Components;
 /// </summary>
 public sealed class DisplayCollector : IInfoCollector
 {
-    public string Name => "Màn hình";
+    public string Name => S("Màn hình", "Displays");
     public int Order => 60;
 
     // Duyệt từng cổng xuất hình rồi đọc EDID của mỗi màn.
@@ -69,11 +70,9 @@ public sealed class DisplayCollector : IInfoCollector
                 ApplyCurrentMode(display, adapter.DeviceName);
 
                 var instancePath = ExtractInstancePath(monitor.DeviceID);
-                var source = "registry";
                 var edid = ReadEdidFromRegistry(instancePath);
                 if (edid is null || !EdidParser.TryParse(edid, display))
                 {
-                    source = "WMI";
                     edid = LookupWmiEdid(wmiEdidMap, instancePath);
                     if (edid is not null && !EdidParser.TryParse(edid, display)) edid = null;
                 }
@@ -81,8 +80,6 @@ public sealed class DisplayCollector : IInfoCollector
                 if (edid is not null)
                 {
                     display.EdidAvailable = true;
-                    display.EdidSource = source;
-                    display.EdidInputByte = edid[20];
                 }
 
                 display.Connection = ResolveConnection(connectionMap, instancePath, display);
@@ -240,13 +237,9 @@ public sealed class DisplayCollector : IInfoCollector
     private static DisplayConnection ResolveConnection(
         Dictionary<string, long> map, string instancePath, DisplayInfo display)
     {
-        var reported = DisplayConnection.Unknown;
-        if (map.TryGetValue(instancePath, out var code))
-        {
-            display.ReportedTechnologyCode = code;
-            reported = TranslateOutputTechnology(code);
-            display.WindowsConnection = reported;
-        }
+        var reported = map.TryGetValue(instancePath, out var code)
+            ? TranslateOutputTechnology(code)
+            : DisplayConnection.Unknown;
 
         if (display.EdidDigitalInput == false && reported != DisplayConnection.Internal)
         {
@@ -272,7 +265,6 @@ public sealed class DisplayCollector : IInfoCollector
         var display = new DisplayInfo
         {
             AdapterDeviceName = @"\\.\DISPLAY1",
-            FriendlyName = "Màn hình mặc định",
             IsPrimary = true,
             IsActive = true
         };

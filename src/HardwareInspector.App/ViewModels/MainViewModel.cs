@@ -22,6 +22,9 @@ namespace HardwareInspector.App.ViewModels;
 /// </summary>
 public sealed record MetricRowView(MetricLine Metric, ComponentModelSpec? Spec, string? StateKey);
 
+/// <summary>Một ô thông tin nhanh ở phần kết luận: tên linh kiện và vài thông số chính.</summary>
+public sealed record QuickFact(string Label, string Value);
+
 public sealed class MainViewModel : ObservableObject, IDisposable
 {
     private readonly InspectionPipeline _pipeline = new();
@@ -81,6 +84,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             // Gán Loc.Current phát sự kiện, mọi thực thể UiStrings tự làm mới binding.
             Loc.Current = value.Language;
             RebuildLocalizedContent();
+
+            var results = BenchmarkResults.Select(r => r.Rebuild?.Invoke() ?? r).ToList();
+            BenchmarkResults.Clear();
+            foreach (var r in results) BenchmarkResults.Add(r);
             if (_snapshot is { } snapshot) RefreshPortChoices(snapshot);
         }
     }
@@ -93,6 +100,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
+        _pipeline.Relocalize(_snapshot);
         var assessment = _assessmentService.Assess(_snapshot);
         Assessment = assessment;
 
@@ -143,6 +151,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(FirmwareColor));
             OnPropertyChanged(nameof(MachineTitle));
             OnPropertyChanged(nameof(SummaryText));
+            OnPropertyChanged(nameof(QuickFacts));
             OnPropertyChanged(nameof(CrossChecks));
             OnPropertyChanged(nameof(ManualChecklist));
             OnPropertyChanged(nameof(FirmwareFindings));
@@ -301,8 +310,70 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public bool HasResult => _assessment is not null;
     public string MachineTitle => _assessment?.MachineTitle ?? Environment.MachineName;
     public string SummaryText => _assessment?.Summary ?? string.Empty;
+
+    /// <summary>
+    /// Thông tin nhanh của máy ở phần kết luận: model bo mạch, CPU, RAM, từng ổ, card đồ hoạ,
+    /// kích thước và tần số quét từng màn. Chi tiết đầy đủ vẫn nằm ở danh sách linh kiện.
+    /// </summary>
+    public IReadOnlyList<QuickFact> QuickFacts => _snapshot is { } s ? BuildQuickFacts(s) : Array.Empty<QuickFact>();
+
+    private static IReadOnlyList<QuickFact> BuildQuickFacts(SystemSnapshot s)
+    {
+        static string Join(params string?[] parts) =>
+            string.Join(" · ", parts.Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => p!.Trim()));
+
+        static string Lines(IEnumerable<string> lines)
+        {
+            var text = string.Join("\n", lines);
+            return string.IsNullOrWhiteSpace(text) ? "—" : text;
+        }
+
+        var facts = new List<QuickFact>();
+
+        var b = s.Baseboard;
+        var board = Join(b.BoardManufacturer, b.BoardProduct);
+        var system = Join(b.SystemManufacturer, b.SystemProductName);
+        facts.Add(new QuickFact(Loc.S("Bo mạch chủ", "Motherboard"),
+            s.IsLaptop && !FormatHelpers.IsPlaceholder(b.SystemProductName) && !string.IsNullOrWhiteSpace(system)
+                ? $"{system}\n{board}".Trim()
+                : string.IsNullOrWhiteSpace(board) ? "—" : board));
+
+        facts.Add(new QuickFact("CPU", Lines(s.Processors.Select(c => Join(c.Name,
+            c.PhysicalCores > 0 ? Loc.S("{0} nhân / {1} luồng", "{0} cores / {1} threads", c.PhysicalCores, c.LogicalCores) : null)))));
+
+        var mem = s.Memory;
+        var modules = mem.Modules;
+        var speed = modules.Select(m => m.ConfiguredSpeedMtps > 0 ? m.ConfiguredSpeedMtps : m.SpeedMtps).DefaultIfEmpty(0).Max();
+        facts.Add(new QuickFact("RAM", mem.TotalPhysicalBytes > 0 || modules.Count > 0
+            ? Join(
+                (modules.Count > 0 ? modules.Sum(m => m.CapacityBytes) : mem.TotalPhysicalBytes).ToSize(0),
+                modules.Select(m => m.MemoryType).FirstOrDefault(t => !string.IsNullOrWhiteSpace(t) && t.StartsWith("DDR", StringComparison.OrdinalIgnoreCase)),
+                speed > 0 ? $"{speed} MT/s" : null,
+                modules.Count > 0 ? Loc.S("{0} thanh", "{0} module(s)", modules.Count) : null)
+            : "—"));
+
+        facts.Add(new QuickFact(Loc.S("Ổ lưu trữ", "Storage"), Lines(s.StorageDevices.Select(d =>
+            Join(d.Model, d.CapacityBytes > 0 ? d.CapacityBytes.ToSize(0) : null, Join(d.BusType, d.MediaType))))));
+
+        facts.Add(new QuickFact(Loc.S("Card đồ hoạ (VGA)", "Graphics (GPU)"), Lines(s.GraphicsAdapters
+            .OrderByDescending(g => g.IsDiscrete)
+            .Select(g => Join(g.Name, g.VideoMemoryBytes > 0 ? g.VideoMemoryBytes.ToSize(0) : null)))));
+
+        facts.Add(new QuickFact(Loc.S("Màn hình", "Displays"), Lines(s.Displays.Select((d, i) =>
+        {
+            var size = d.DiagonalInches is { } inch ? $"{inch}\"" : Loc.S("không rõ kích thước", "size unknown");
+            var hz = d.RefreshHz is { } r
+                ? d.MaxRefreshHz is { } max && max > r
+                    ? Loc.S("{0} Hz (tối đa {1} Hz)", "{0} Hz (max {1} Hz)", r, max)
+                    : $"{r} Hz"
+                : d.MaxRefreshHz is { } m ? Loc.S("tối đa {0} Hz", "max {0} Hz", m) : null;
+            return $"{Loc.S("Màn {0}", "Display {0}", i + 1)}: {Join(size, hz)}";
+        }))));
+
+        return facts;
+    }
     public string OverallScoreText => _assessment is null ? "—" : _assessment.OverallScore.ToString();
-    public string OverallRatingText => _assessment?.OverallRating.ToText() ?? "Chưa kiểm tra";
+    public string OverallRatingText => _assessment?.OverallRating.ToText() ?? Ui["Verdict.NotChecked"];
     public string OverallColor => _assessment?.OverallRating.ToHexColor() ?? "#8A8F98";
 
     public string TrustLevelText => _assessment is null
@@ -311,7 +382,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public string TrustVerdict => _assessment?.Trust.Verdict ?? string.Empty;
 
-    public string FirmwareStatusText => _assessment?.Firmware.Status.ToText() ?? "Chưa kiểm tra";
+    public string FirmwareStatusText => _assessment?.Firmware.Status.ToText() ?? Ui["Verdict.NotChecked"];
 
     public string FirmwareColor => _assessment?.Firmware.Status switch
     {

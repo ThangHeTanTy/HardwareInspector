@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using HardwareInspector.Core.Abstractions;
 using HardwareInspector.Core.Models;
+using static HardwareInspector.Core.Localization.Loc;
 
 namespace HardwareInspector.Benchmark;
 
@@ -14,7 +15,7 @@ public sealed class MemoryBandwidthBenchmark : IBenchmark
     private const int BufferMb = 256;
     private const int Iterations = 12;
 
-    public string Name => "Băng thông bộ nhớ";
+    public string Name => S("Băng thông bộ nhớ", "Memory bandwidth");
     public ComponentKind Target => ComponentKind.Memory;
     public TimeSpan EstimatedDuration => TimeSpan.FromSeconds(15);
 
@@ -43,9 +44,9 @@ public sealed class MemoryBandwidthBenchmark : IBenchmark
             var totalGb = Iterations * (size * 2L) / (1024.0 * 1024 * 1024);
             var bandwidth = totalGb / sw.Elapsed.TotalSeconds;
 
-            return new BenchmarkResult(
+            return BenchmarkResult.Localized(() => new BenchmarkResult(
                 Name, "GB/s", Math.Round(bandwidth, 2),
-                $"{Iterations} lượt sao chép khối {BufferMb} MB");
+                S($"{Iterations} lượt sao chép khối {BufferMb} MB", $"{Iterations} copies of a {BufferMb} MB block")));
         }, ct);
     }
 }

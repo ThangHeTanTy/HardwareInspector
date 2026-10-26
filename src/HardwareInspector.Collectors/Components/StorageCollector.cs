@@ -3,12 +3,13 @@ using HardwareInspector.Collectors.Wmi;
 using HardwareInspector.Core.Abstractions;
 using HardwareInspector.Core.Models;
 using HardwareInspector.Core.Models.Components;
+using static HardwareInspector.Core.Localization.Loc;
 
 namespace HardwareInspector.Collectors.Components;
 
 public sealed class StorageCollector : IInfoCollector
 {
-    public string Name => "Ổ lưu trữ";
+    public string Name => S("Ổ lưu trữ", "Storage drives");
     public int Order => 40;
 
     // Mỗi ổ phải mở thiết bị ở mức khối và chờ phản hồi lệnh S.M.A.R.T.
@@ -74,14 +75,10 @@ public sealed class StorageCollector : IInfoCollector
 
         // Không đọc được thì phải nói rõ vì sao, để người dùng biết cần làm gì tiếp.
         device.SmartFailureReason = device.BusType.Contains("USB", StringComparison.OrdinalIgnoreCase)
-            ? "Ổ gắn qua cầu USB. Phần lớn cầu USB không chuyển tiếp lệnh S.M.A.R.T. " +
-              "Hãy tháo ổ ra và cắm trực tiếp vào cổng SATA hoặc khe M.2 để đọc được."
+            ? SmartFailure.UsbBridge
             : !BaseboardCollector.IsElevated()
-                ? "Phiên chạy không có quyền Administrator nên không mở được thiết bị ở mức khối. " +
-                  "Hãy chạy lại ứng dụng bằng Run as administrator."
-                : "Driver của controller không chấp nhận lệnh S.M.A.R.T. " +
-                  "Thường gặp khi ổ nằm sau RAID (Intel RST / AMD RAID). " +
-                  "Chuyển chế độ SATA trong BIOS sang AHCI sẽ đọc được.";
+                ? SmartFailure.NotElevated
+                : SmartFailure.ControllerRejected;
     }
 
     /// <summary>WMI hay trả serial dạng hex đã mã hoá hoặc có khoảng trắng thừa.</summary>
@@ -112,7 +109,7 @@ public sealed class StorageCollector : IInfoCollector
         3 => "HDD",
         4 => "SSD",
         5 => "SCM",
-        _ => "Không xác định"
+        _ => string.Empty
     };
 
     private static string TranslateBusType(int code, string fallback) => code switch
@@ -125,6 +122,6 @@ public sealed class StorageCollector : IInfoCollector
         10 => "SAS",
         11 => "SATA",
         17 => "NVMe",
-        _ => string.IsNullOrWhiteSpace(fallback) ? "Không xác định" : fallback
+        _ => fallback.Trim()
     };
 }

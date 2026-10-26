@@ -3,12 +3,13 @@ using HardwareInspector.Core.Abstractions;
 using HardwareInspector.Core.Models;
 using HardwareInspector.Core.Models.Components;
 using Microsoft.Win32;
+using static HardwareInspector.Core.Localization.Loc;
 
 namespace HardwareInspector.Collectors.Components;
 
 public sealed class GraphicsCollector : IInfoCollector
 {
-    public string Name => "Card đồ họa";
+    public string Name => S("Card đồ họa", "Graphics");
     public int Order => 20;
 
     public Task CollectAsync(SystemSnapshot snapshot, CancellationToken ct = default)

@@ -1,3 +1,5 @@
+using static HardwareInspector.Core.Localization.Loc;
+
 namespace HardwareInspector.Core.Models.Components;
 
 public sealed class BaseboardInfo
@@ -19,7 +21,17 @@ public sealed class BaseboardInfo
     public string ChassisAssetTag { get; set; } = string.Empty;
 
     /// <summary>Trạng thái cảm biến mở vỏ máy (SMBIOS Type 3). "Safe" nếu chưa từng bị mở.</summary>
-    public string ChassisSecurityStatus { get; set; } = "Không xác định";
+    /// <summary>Mã SecurityStatus của Win32_SystemEnclosure; -1 khi không đọc được.</summary>
+    public int ChassisSecurityCode { get; set; } = -1;
+
+    public string ChassisSecurityStatus => ChassisSecurityCode switch
+    {
+        1 => S("Khác", "Other"),
+        3 => S("An toàn (chưa ghi nhận mở vỏ)", "Safe (no intrusion recorded)"),
+        4 => S("Có khoá ngoài", "External interface locked out"),
+        5 => S("Đã bị mở vỏ / khoá bị vô hiệu", "Opened / lock disabled"),
+        _ => S("Không xác định", "Unknown")
+    };
 }
 
 public sealed class BiosInfo
@@ -42,7 +54,7 @@ public sealed class OperatingSystemInfo
     public DateTime? InstallDate { get; set; }
     public DateTime? LastBootUpTime { get; set; }
     public string Architecture { get; set; } = string.Empty;
-    public string LicenseChannel { get; set; } = "Không xác định"; // OEM_DM / Retail / Volume
+    public string LicenseChannel { get; set; } = string.Empty; // OEM_DM / Retail / Volume
     public bool IsActivated { get; set; }
     public bool IsAdminSession { get; set; }
     public TimeSpan Uptime => LastBootUpTime.HasValue ? DateTime.Now - LastBootUpTime.Value : TimeSpan.Zero;

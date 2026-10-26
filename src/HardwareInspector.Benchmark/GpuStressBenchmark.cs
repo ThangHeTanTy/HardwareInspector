@@ -47,7 +47,7 @@ public sealed class GpuStressBenchmark : IBenchmark
 
         LastResult = result;
         progress?.Report(1);
-        return ToBenchmarkResult(result);
+        return BenchmarkResult.Localized(() => ToBenchmarkResult(result));
     }
 
     private void Run(GpuTestResult result, IProgress<double>? progress, CancellationToken ct)

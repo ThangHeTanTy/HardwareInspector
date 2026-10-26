@@ -1,3 +1,5 @@
+using static HardwareInspector.Core.Localization.Loc;
+
 namespace HardwareInspector.Core.Models.Components;
 
 /// <summary>Cổng vật lý mà màn hình đang cắm vào.</summary>
@@ -54,18 +56,6 @@ public sealed class DisplayInfo
     public DisplayConnection? ReportedConnection { get; set; }
 
     public bool ViaConverter => ReportedConnection is not null && ReportedConnection != Connection;
-
-    /// <summary>Mã VideoOutputTechnology thô Windows trả về, để hiển thị làm căn cứ.</summary>
-    public long? ReportedTechnologyCode { get; set; }
-
-    /// <summary>Cổng Windows báo (dịch từ <see cref="ReportedTechnologyCode"/>), giữ nguyên khi có chọn tay.</summary>
-    public DisplayConnection? WindowsConnection { get; set; }
-
-    /// <summary>Nơi đọc được EDID: "registry", "WMI", hoặc null khi không đọc được.</summary>
-    public string? EdidSource { get; set; }
-
-    /// <summary>Giá trị byte 20 của EDID (kiểu tín hiệu vào), để hiển thị làm căn cứ.</summary>
-    public byte? EdidInputByte { get; set; }
 
     // Kết quả tự nhận diện, giữ lại khi người dùng chọn tay để bỏ chọn thì trả về như cũ.
     private (DisplayConnection Connection, DisplayConnection? Reported)? _detected;
@@ -127,40 +117,41 @@ public sealed class DisplayInfo
             : null;
 
     public string ConnectionText => ViaConverter
-        ? $"{NameOf(Connection)} — qua bộ chuyển {ShortOf(ReportedConnection!.Value)}→{ShortOf(Connection)}"
+        ? S($"{NameOf(Connection)} — qua bộ chuyển {ShortOf(ReportedConnection!.Value)}→{ShortOf(Connection)}",
+            $"{NameOf(Connection)} — via a {ShortOf(ReportedConnection!.Value)}→{ShortOf(Connection)} converter")
         : NameOf(Connection);
 
     /// <summary>Tên cổng ở dạng ngắn, dùng cho ô chọn màn hình.</summary>
     public string ConnectionShort => ViaConverter
-        ? $"{ShortOf(Connection)} (qua {ShortOf(ReportedConnection!.Value)})"
+        ? S($"{ShortOf(Connection)} (qua {ShortOf(ReportedConnection!.Value)})", $"{ShortOf(Connection)} (via {ShortOf(ReportedConnection!.Value)})")
         : ShortOf(Connection);
 
     private static string NameOf(DisplayConnection connection) => connection switch
     {
-        DisplayConnection.Internal => "Tấm nền tích hợp (eDP/LVDS)",
+        DisplayConnection.Internal => S("Tấm nền tích hợp (eDP/LVDS)", "Built-in panel (eDP/LVDS)"),
         DisplayConnection.Vga => "VGA (D-Sub)",
         DisplayConnection.Dvi => "DVI",
         DisplayConnection.Hdmi => "HDMI",
         // USB-C/Thunderbolt chạy chế độ DisplayPort Alt Mode nên Windows cũng báo là DisplayPort.
-        DisplayConnection.DisplayPort => "DisplayPort (hoặc USB-C/Thunderbolt)",
+        DisplayConnection.DisplayPort => S("DisplayPort (hoặc USB-C/Thunderbolt)", "DisplayPort (or USB-C/Thunderbolt)"),
         DisplayConnection.UsbC => "USB-C / Thunderbolt",
-        DisplayConnection.Wireless => "Không dây (Miracast)",
-        DisplayConnection.Other => "Cổng khác",
-        _ => "Không xác định"
+        DisplayConnection.Wireless => S("Không dây (Miracast)", "Wireless (Miracast)"),
+        DisplayConnection.Other => S("Cổng khác", "Other port"),
+        _ => S("Không xác định", "Unknown")
     };
 
     public static string LongName(DisplayConnection connection) => NameOf(connection);
 
     private static string ShortOf(DisplayConnection connection) => connection switch
     {
-        DisplayConnection.Internal => "tích hợp",
+        DisplayConnection.Internal => S("tích hợp", "built-in"),
         DisplayConnection.Vga => "VGA",
         DisplayConnection.Dvi => "DVI",
         DisplayConnection.Hdmi => "HDMI",
         DisplayConnection.DisplayPort => "DisplayPort",
         DisplayConnection.UsbC => "USB-C",
-        DisplayConnection.Wireless => "không dây",
-        _ => "cổng khác"
+        DisplayConnection.Wireless => S("không dây", "wireless"),
+        _ => S("cổng khác", "other")
     };
 
     /// <summary>
@@ -177,7 +168,7 @@ public sealed class DisplayInfo
                      : !string.IsNullOrWhiteSpace(ManufacturerName) ? ManufacturerName
                      : AdapterDeviceName.Replace(@"\\.\", string.Empty);
 
-            var tag = IsPrimary ? " · chính" : string.Empty;
+            var tag = IsPrimary ? S(" · chính", " · primary") : string.Empty;
             return $"{name} · {Resolution} · {ConnectionShort}{tag}";
         }
     }

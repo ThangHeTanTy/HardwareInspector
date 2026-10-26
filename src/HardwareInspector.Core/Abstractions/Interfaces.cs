@@ -21,6 +21,15 @@ public interface IInfoCollector
     Task CollectAsync(SystemSnapshot snapshot, CancellationToken ct = default);
 }
 
+/// <summary>
+/// Collector sinh câu chữ ngay lúc quét (tiêu đề, mô tả phát hiện).
+/// Đổi ngôn ngữ thì dựng lại câu chữ đó từ dữ liệu đã đọc, không đụng tới phần cứng.
+/// </summary>
+public interface IRelocalizable
+{
+    void Relocalize(SystemSnapshot snapshot);
+}
+
 /// <summary>Biến dữ liệu thô của một linh kiện thành đánh giá có điểm số và cảnh báo.</summary>
 public interface IComponentAnalyzer
 {
@@ -53,7 +62,18 @@ public sealed record BenchmarkResult(
     string Unit,
     double Value,
     string? Detail = null,
-    IReadOnlyDictionary<string, string>? Extra = null);
+    IReadOnlyDictionary<string, string>? Extra = null)
+{
+    /// <summary>Dựng lại kết quả theo ngôn ngữ đang chọn từ số đo đã có; null khi không cần.</summary>
+    public Func<BenchmarkResult>? Rebuild { get; init; }
+
+    /// <summary>
+    /// Dựng kết quả bằng hàm build và gắn luôn cách dựng lại, để đổi ngôn ngữ thì
+    /// tên bài, đơn vị và mô tả đổi theo mà không phải chạy lại bài tải.
+    /// </summary>
+    public static BenchmarkResult Localized(Func<BenchmarkResult> build) =>
+        build() with { Rebuild = () => Localized(build) };
+}
 
 public interface IBenchmark
 {

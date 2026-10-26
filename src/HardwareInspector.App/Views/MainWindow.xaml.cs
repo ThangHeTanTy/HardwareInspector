@@ -21,7 +21,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show(
-                "Không khởi tạo được ViewModel.\n\n" + Describe(ex),
+                Localization.UiStrings.Instance["Msg.VmInitFailed"] + Describe(ex),
                 "Hardware Inspector", MessageBoxButton.OK, MessageBoxImage.Error);
             throw;
         }

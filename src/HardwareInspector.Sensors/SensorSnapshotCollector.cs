@@ -1,5 +1,6 @@
 using HardwareInspector.Core.Abstractions;
 using HardwareInspector.Core.Models;
+using static HardwareInspector.Core.Localization.Loc;
 
 namespace HardwareInspector.Sensors;
 
@@ -13,7 +14,7 @@ public sealed class SensorSnapshotCollector : IInfoCollector
 
     public SensorSnapshotCollector(ISensorMonitor monitor) => _monitor = monitor;
 
-    public string Name => "Cảm biến nhiệt độ và xung nhịp";
+    public string Name => S("Cảm biến nhiệt độ và xung nhịp", "Temperature and clock sensors");
     public int Order => 100;
 
     public Task CollectAsync(SystemSnapshot snapshot, CancellationToken ct = default)

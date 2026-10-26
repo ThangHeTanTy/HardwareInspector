@@ -30,14 +30,14 @@ public sealed class GraphicsAnalyzer : IComponentAnalyzer
         var gpu = snapshot.PrimaryGpu!;
         var card = new ScoreCard(Kind, gpu.Name.OrDash());
 
-        card.Metric("Nhà sản xuất", gpu.Vendor.OrDash())
-            .Metric("Loại", gpu.IsDiscrete ? "Card rời" : "Đồ hoạ tích hợp")
-            .MetricIf(gpu.VideoMemoryBytes > 0, "Bộ nhớ đồ hoạ", gpu.VideoMemoryBytes.ToSize(0))
+        card.Metric(S("Nhà sản xuất", "Manufacturer"), gpu.Vendor.OrDash())
+            .Metric(S("Loại", "Type"), gpu.IsDiscrete ? S("Card rời", "Discrete card") : S("Đồ hoạ tích hợp", "Integrated graphics"))
+            .MetricIf(gpu.VideoMemoryBytes > 0, S("Bộ nhớ đồ hoạ", "Video memory"), gpu.VideoMemoryBytes.ToSize(0))
             .Metric("Driver", $"{gpu.DriverVersion.OrDash()} ({gpu.DriverDate:dd/MM/yyyy})")
             .MetricIf(gpu.VideoBiosVersion is not null, "vBIOS", gpu.VideoBiosVersion.OrDash());
 
         if (snapshot.GraphicsAdapters.Count > 1)
-            card.Metric("Các card khác",
+            card.Metric(S("Các card khác", "Other adapters"),
                 string.Join(", ", snapshot.GraphicsAdapters.Skip(1).Select(g => g.Name)));
 
         var temps = snapshot.SensorSnapshot
@@ -64,22 +64,23 @@ public sealed class GraphicsAnalyzer : IComponentAnalyzer
 
         if (core is not null)
         {
-            card.Metric("Nhiệt độ GPU (min / TB / max)",
+            card.Metric(S("Nhiệt độ GPU (min / TB / max)", "GPU temperature (min / avg / max)"),
                 $"{core.Min:0} / {core.Average:0} / {core.Max:0} °C",
                 underLoad ? null : S("Số liệu lúc nghỉ — chưa chạy bài tải GPU",
                                      "Idle readings — the GPU stress test has not been run"));
 
             if (core.Max >= 90)
                 card.Add("GPU-TEMP-001", Kind, Severity.Warning,
-                    $"GPU đạt {core.Max:0} °C",
-                    "Nhiệt độ này khiến card tự hạ xung. Nguyên nhân phổ biến là keo tản nhiệt khô hoặc quạt bám bụi.",
-                    "Vệ sinh và thay keo tản nhiệt cho card.",
+                    S($"GPU đạt {core.Max:0} °C", $"GPU reached {core.Max:0} °C"),
+                    S("Nhiệt độ này khiến card tự hạ xung. Nguyên nhân phổ biến là keo tản nhiệt khô hoặc quạt bám bụi.",
+                      "At this temperature the card throttles. Usual causes are dried thermal paste or dusty fans."),
+                    S("Vệ sinh và thay keo tản nhiệt cho card.", "Clean the card and replace its thermal paste."),
                     penalty: 15, confidence: 0.85, source: EvidenceSource.Sensor);
         }
         else
         {
-            card.Metric("Nhiệt độ GPU", "Không đọc được",
-                "Cần quyền Administrator, hoặc card không phơi bày cảm biến", Severity.Notice);
+            card.Metric(S("Nhiệt độ GPU", "GPU temperature"), S("Không đọc được", "Unreadable"),
+                S("Cần quyền Administrator, hoặc card không phơi bày cảm biến", "Needs Administrator rights, or the card does not expose sensors"), Severity.Notice);
         }
 
         // Chênh lệch lớn giữa nhiệt độ nhân và điểm nóng nhất là dấu hiệu kinh điển
@@ -87,38 +88,43 @@ public sealed class GraphicsAnalyzer : IComponentAnalyzer
         if (core is not null && hotspot is not null)
         {
             var delta = hotspot.Max - core.Max;
-            card.Metric("Chênh lệch nhân ↔ điểm nóng", $"{delta:0} °C");
+            card.Metric(S("Chênh lệch nhân ↔ điểm nóng", "Core ↔ hotspot delta"), $"{delta:0} °C");
 
             if (delta > 25)
                 card.Add("GPU-TEMP-002", Kind, Severity.Critical,
-                    $"Chênh lệch điểm nóng lên tới {delta:0} °C",
-                    "Trên card khoẻ, chênh lệch này thường dưới 15 °C. " +
-                    "Mức cao bất thường cho thấy keo tản nhiệt đã tách lớp hoặc lắp lệch, " +
-                    "hay gặp ở card đã chạy tải nặng liên tục nhiều tháng.",
-                    "Yêu cầu người bán thay keo và pad trước khi giao, hoặc trừ chi phí bảo dưỡng.",
+                    S($"Chênh lệch điểm nóng lên tới {delta:0} °C", $"Hotspot delta as high as {delta:0} °C"),
+                    S("Trên card khoẻ, chênh lệch này thường dưới 15 °C. " +
+                      "Mức cao bất thường cho thấy keo tản nhiệt đã tách lớp hoặc lắp lệch, " +
+                      "hay gặp ở card đã chạy tải nặng liên tục nhiều tháng.",
+                      "On a healthy card this delta is usually under 15 °C. " +
+                      "An abnormally high value means the thermal paste has separated or the cooler sits unevenly, " +
+                      "common on cards that ran heavy load for months."),
+                    S("Yêu cầu người bán thay keo và pad trước khi giao, hoặc trừ chi phí bảo dưỡng.",
+                      "Ask the seller to replace the paste and pads before handover, or deduct the service cost."),
                     penalty: 28, confidence: 0.85, source: EvidenceSource.Sensor);
             else if (delta > 18)
                 card.Add("GPU-TEMP-003", Kind, Severity.Warning,
-                    $"Chênh lệch điểm nóng {delta:0} °C",
-                    "Cao hơn mức bình thường. Keo tản nhiệt bắt đầu xuống cấp.",
+                    S($"Chênh lệch điểm nóng {delta:0} °C", $"Hotspot delta {delta:0} °C"),
+                    S("Cao hơn mức bình thường. Keo tản nhiệt bắt đầu xuống cấp.", "Higher than normal. The thermal paste is starting to degrade."),
                     penalty: 12, confidence: 0.7, source: EvidenceSource.Sensor);
         }
 
         if (memoryTemp is not null)
         {
-            card.Metric("Nhiệt độ VRAM (max)", $"{memoryTemp.Max:0} °C");
+            card.Metric(S("Nhiệt độ VRAM (max)", "VRAM temperature (max)"), $"{memoryTemp.Max:0} °C");
             if (memoryTemp.Max >= 95)
                 card.Add("GPU-VRAM-001", Kind, Severity.Warning,
-                    $"VRAM nóng {memoryTemp.Max:0} °C",
-                    "GDDR6 hoạt động ổn định dưới khoảng 95 °C. Vượt mức này thường do pad tản nhiệt đã chai.",
-                    "Thay pad tản nhiệt cho chip nhớ.",
+                    S($"VRAM nóng {memoryTemp.Max:0} °C", $"VRAM running hot at {memoryTemp.Max:0} °C"),
+                    S("GDDR6 hoạt động ổn định dưới khoảng 95 °C. Vượt mức này thường do pad tản nhiệt đã chai.",
+                      "GDDR6 is stable below about 95 °C. Going above usually means the thermal pads have hardened."),
+                    S("Thay pad tản nhiệt cho chip nhớ.", "Replace the memory thermal pads."),
                     penalty: 14, confidence: 0.8, source: EvidenceSource.Sensor);
         }
 
         if (fans.Count > 0)
         {
             foreach (var fan in fans.Take(3))
-                card.Metric($"Quạt {fan.SensorName}", $"{fan.Min:0} – {fan.Max:0} RPM");
+                card.Metric(S($"Quạt {fan.SensorName}", $"Fan {fan.SensorName}"), $"{fan.Min:0} – {fan.Max:0} RPM");
 
             // Lúc nghỉ, card hiện đại tắt hẳn quạt — không quay chưa nói lên điều gì.
             // Chỉ khi đã chạy tải nặng mà quạt vẫn đứng yên thì mới là dấu hiệu hỏng.
@@ -137,13 +143,14 @@ public sealed class GraphicsAnalyzer : IComponentAnalyzer
 
         var clock = clocks.FirstOrDefault(c => c.SensorName.Contains("Core", StringComparison.OrdinalIgnoreCase));
         if (clock is not null)
-            card.Metric("Xung nhân (min / TB / max)", $"{clock.Min:0} / {clock.Average:0} / {clock.Max:0} MHz");
+            card.Metric(S("Xung nhân (min / TB / max)", "Core clock (min / avg / max)"), $"{clock.Min:0} / {clock.Average:0} / {clock.Max:0} MHz");
 
         if (gpu.DriverDate is { } dd && (DateTime.Now - dd).TotalDays > 730)
             card.Add("GPU-DRV-001", Kind, Severity.Notice,
-                $"Driver đồ hoạ đã cũ ({dd:MM/yyyy})",
-                "Driver quá cũ thường gây lỗi hiển thị và không hỗ trợ tựa game/ứng dụng mới.",
-                "Cài driver mới nhất từ trang của hãng card.",
+                S($"Driver đồ hoạ đã cũ ({dd:MM/yyyy})", $"Graphics driver is old ({dd:MM/yyyy})"),
+                S("Driver quá cũ thường gây lỗi hiển thị và không hỗ trợ tựa game/ứng dụng mới.",
+                  "Very old drivers often cause display glitches and do not support new games/apps."),
+                S("Cài driver mới nhất từ trang của hãng card.", "Install the latest driver from the card vendor's site."),
                 penalty: 5, confidence: 0.9);
 
         if (test is not null)
