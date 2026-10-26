@@ -13,8 +13,8 @@
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />   <!-- Thanh lệnh -->
       <RowDefinition Height="Auto" />   <!-- Tiến độ -->
-      <RowDefinition Height="Auto" />   <!-- Kết luận -->
-      <RowDefinition Height="*" />      <!-- Nội dung -->
+      <RowDefinition Height="Auto" />   <!-- Dự phòng, để giữ số thứ tự các hàng -->
+      <RowDefinition Height="*" />      <!-- Kết luận (40%) + nội dung (60%) -->
       <RowDefinition Height="Auto" />   <!-- Trạng thái -->
     </Grid.RowDefinitions>
 
@@ -108,84 +108,90 @@
       <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="100" Height="4" />
     </StackPanel>
 
-    <!-- ========== Kết luận tổng ========== -->
-    <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,0,0,14"
+    <!-- ========== Kết luận tổng ==========
+         Chiếm 40% phần còn lại của cửa sổ, 60% dành cho phần đánh giá chi tiết bên dưới.
+         Chưa có kết quả thì hàng này co về 0 để phần nội dung chiếm hết chỗ. -->
+    <Grid Grid.Row="3">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="{Binding VerdictRowHeight}" />
+        <RowDefinition Height="3*" />
+      </Grid.RowDefinitions>
+
+    <Border Grid.Row="0" Style="{StaticResource Card}" Margin="0,0,0,12" Padding="16,12"
             Visibility="{Binding HasResult, Converter={StaticResource BoolToVisibility}}">
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto" />
-          <ColumnDefinition Width="*" />
-          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" MinWidth="200" />
+          <ColumnDefinition Width="1.1*" MinWidth="280" />
           <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
 
-        <!-- Điểm tổng -->
-        <Border Grid.Column="0" CornerRadius="10" Padding="22,14" MinWidth="128"
-                BorderThickness="2"
-                BorderBrush="{Binding OverallColor, Converter={StaticResource HexToBrush}}">
-          <StackPanel HorizontalAlignment="Center">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-              <TextBlock Text="{Binding OverallScoreText}" FontSize="40" FontWeight="Bold"
+        <!-- Điểm tổng, mức tin cậy và tình trạng BIOS xếp chồng thành một cột hẹp -->
+        <StackPanel Grid.Column="0" MinWidth="150">
+          <Border CornerRadius="10" Padding="14,8" BorderThickness="2"
+                  BorderBrush="{Binding OverallColor, Converter={StaticResource HexToBrush}}">
+            <StackPanel HorizontalAlignment="Center">
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <TextBlock Text="{Binding OverallScoreText}" FontSize="30" FontWeight="Bold"
+                           Foreground="{Binding OverallColor, Converter={StaticResource HexToBrush}}" />
+                <TextBlock Text="/100" FontSize="13" VerticalAlignment="Bottom" Margin="3,0,0,5"
+                           Style="{StaticResource Dim}" />
+              </StackPanel>
+              <TextBlock Text="{Binding OverallRatingText}" FontWeight="SemiBold"
+                         HorizontalAlignment="Center"
                          Foreground="{Binding OverallColor, Converter={StaticResource HexToBrush}}" />
-              <TextBlock Text="/100" FontSize="15" VerticalAlignment="Bottom" Margin="3,0,0,7"
-                         Style="{StaticResource Dim}" />
             </StackPanel>
-            <TextBlock Text="{Binding OverallRatingText}" FontWeight="SemiBold"
-                       HorizontalAlignment="Center"
-                       Foreground="{Binding OverallColor, Converter={StaticResource HexToBrush}}" />
-          </StackPanel>
-        </Border>
-
-        <!-- Tóm tắt -->
-        <StackPanel Grid.Column="1" Margin="22,0">
-          <TextBlock Text="{Binding SummaryText}" Margin="0,0,0,8" />
-          <TextBlock Text="{Binding TrustVerdict}" Style="{StaticResource Dim}" />
-        </StackPanel>
-
-        <!-- Hai chỉ số then chốt -->
-        <StackPanel Grid.Column="2" MinWidth="230">
-          <TextBlock Text="{Binding [Verdict.Trust], Source={StaticResource Ui}}" Style="{StaticResource Eyebrow}" />
-          <TextBlock Text="{Binding TrustLevelText}" FontWeight="SemiBold" FontSize="15"
-                     Margin="0,2,0,12" />
+          </Border>
+          <TextBlock Text="{Binding [Verdict.Trust], Source={StaticResource Ui}}" Style="{StaticResource Eyebrow}"
+                     Margin="0,10,0,0" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding TrustLevelText}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,1,0,6" />
           <TextBlock Text="{Binding [Verdict.Firmware], Source={StaticResource Ui}}" Style="{StaticResource Eyebrow}" />
-          <TextBlock Text="{Binding FirmwareStatusText}" FontWeight="SemiBold" FontSize="15"
-                     Margin="0,2,0,0"
+          <TextBlock Text="{Binding FirmwareStatusText}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,1,0,0"
                      Foreground="{Binding FirmwareColor, Converter={StaticResource HexToBrush}}" />
         </StackPanel>
 
+        <!-- Tóm tắt: dài thì cuộn trong thẻ, không đẩy phần đánh giá bên dưới -->
+        <ScrollViewer Grid.Column="1" Margin="16,0,0,0" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock Text="{Binding SummaryText}" TextWrapping="Wrap" Margin="0,0,0,8" />
+            <TextBlock Text="{Binding TrustVerdict}" TextWrapping="Wrap" Style="{StaticResource Dim}" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- Thông tin nhanh của máy, mỗi linh kiện một dòng. Chi tiết xem ở danh sách linh kiện. -->
+        <Border Grid.Column="2" Margin="16,0,0,0" Padding="14,0,0,0"
+                BorderBrush="{StaticResource LineBrush}" BorderThickness="1,0,0,0">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding QuickFacts}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="118" />
+                      <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Label}" Style="{StaticResource Eyebrow}"
+                               VerticalAlignment="Top" Margin="0,2,8,0" TextWrapping="Wrap" />
+                    <TextBox Grid.Column="1" Text="{Binding Value, Mode=OneWay}"
+                             Style="{StaticResource SelectableText}" FontSize="12.5" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Border>
+
         <!-- Cảnh lắp ráp tổng thể: mọi linh kiện đọc được, đặt đúng chỗ và nối với nhau.
              Cột mốc trên mỗi linh kiện tô màu theo mức đánh giá của linh kiện đó. -->
-        <!-- Thông tin nhanh của máy. Chi tiết xem ở danh sách linh kiện. -->
-        <ItemsControl Grid.Row="1" Grid.ColumnSpan="3" Margin="0,14,0,0" ItemsSource="{Binding QuickFacts}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <UniformGrid Columns="3" />
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate>
-              <StackPanel Margin="0,0,16,10">
-                <TextBlock Text="{Binding Label}" Style="{StaticResource Eyebrow}" />
-                <TextBox Text="{Binding Value, Mode=OneWay}" Style="{StaticResource SelectableText}"
-                         Margin="0,2,0,0" />
-              </StackPanel>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-
-        <views:ComponentModelView Grid.Column="3" Grid.RowSpan="2" Width="340" Height="200" Margin="18,0,0,0"
-                                  VerticalAlignment="Center"
+        <views:ComponentModelView Grid.Column="3" Width="280" Margin="16,0,0,0"
                                   Assembly="{Binding OverviewModel}" Rating="{Binding OverallRating}"
                                   ToolTip="{Binding [Verdict.Overview.Tip], Source={StaticResource Ui}}" />
       </Grid>
     </Border>
 
     <!-- ========== Nội dung ========== -->
-    <TabControl Grid.Row="3" Background="Transparent" BorderThickness="0"
+    <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0"
                 Foreground="{StaticResource TextBrush}">
 
       <!-- Tab 1: Linh kiện -->
@@ -643,6 +649,7 @@
         </Border>
       </TabItem>
     </TabControl>
+    </Grid>
 
     <!-- ========== Trạng thái ========== -->
     <Border Grid.Row="4" Margin="0,12,0,0" Padding="12,8"

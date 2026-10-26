@@ -142,6 +142,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             Set(ref _assessment, value);
             RefreshOverviewModel();
             OnPropertyChanged(nameof(HasResult));
+            OnPropertyChanged(nameof(VerdictRowHeight));
             OnPropertyChanged(nameof(OverallScoreText));
             OnPropertyChanged(nameof(OverallRatingText));
             OnPropertyChanged(nameof(OverallColor));
@@ -310,6 +311,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public bool HasResult => _assessment is not null;
     public string MachineTitle => _assessment?.MachineTitle ?? Environment.MachineName;
     public string SummaryText => _assessment?.Summary ?? string.Empty;
+
+    /// <summary>Thẻ kết luận chiếm 40% chiều cao vùng dưới thanh lệnh; chưa có kết quả thì co về 0.</summary>
+    public System.Windows.GridLength VerdictRowHeight => HasResult
+        ? new System.Windows.GridLength(2, System.Windows.GridUnitType.Star)
+        : new System.Windows.GridLength(0);
 
     /// <summary>
     /// Thông tin nhanh của máy ở phần kết luận: model bo mạch, CPU, RAM, từng ổ, card đồ hoạ,
