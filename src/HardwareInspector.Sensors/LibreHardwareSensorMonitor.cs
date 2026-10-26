@@ -43,8 +43,14 @@ public sealed class LibreHardwareSensorMonitor : ISensorMonitor
                 IsControllerEnabled = true
             };
 
-            _computer.Open();
+            using (DriverLocationGuard.Acquire())
+                _computer.Open();
             _opened = true;
+
+            // Tắt app bình thường đã có Dispose. Hook này lo thêm các đường thoát khác
+            // (Environment.Exit, đóng từ Task Manager bằng tín hiệu thoát) để dịch vụ driver
+            // được gỡ thay vì nằm lại tới lần khởi động lại.
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => Dispose();
             IsAvailable = _computer.Hardware.Count > 0;
         }
         catch (Exception ex)
@@ -167,12 +173,13 @@ public sealed class LibreHardwareSensorMonitor : ISensorMonitor
 
     public void Dispose()
     {
-        StopAsync().GetAwaiter().GetResult();
-        if (_opened && _computer is not null)
+        try { StopAsync().GetAwaiter().GetResult(); } catch { }
+        lock (_sync)
         {
-            try { _computer.Close(); } catch { }
+            if (!_opened || _computer is null) return;
             _opened = false;
         }
+        try { _computer.Close(); } catch { }
     }
 
     private sealed class UpdateVisitor : IVisitor

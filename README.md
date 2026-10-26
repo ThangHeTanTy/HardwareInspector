@@ -157,6 +157,12 @@ biến UEFI và phân vùng EFI — tức là mất phần lớn giá trị củ
 Khi thiếu quyền, phần mềm báo trạng thái firmware là *chưa đủ dữ liệu* chứ không bao giờ
 báo *sạch*.
 
+**Driver cảm biến.** LibreHardwareMonitor nạp driver kernel WinRing0 (dịch vụ `R0HardwareInspector`).
+Ứng dụng đặt file driver trong `%TEMP%` chứ không để cạnh file .exe, nên kể cả khi tiến trình bị dừng
+giữa chừng (bấm Stop trong Visual Studio, End task) thì thư mục project vẫn xoá được bình thường.
+Bản build cũ còn kẹt file `HardwareInspector.sys` trong thư mục `bin` thì chạy
+`tools\unload-driver.cmd` bằng quyền Administrator để gỡ driver mà không cần khởi động lại máy.
+
 ### Thư viện ngoài
 
 | Gói | Dùng để |
