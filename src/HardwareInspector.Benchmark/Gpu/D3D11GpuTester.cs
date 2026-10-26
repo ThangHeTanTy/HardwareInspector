@@ -63,7 +63,7 @@ internal sealed class D3D11GpuTester : IDisposable
     private readonly IDXGIAdapter1 _adapter;
     private readonly ID3D11Device _device;
     private readonly ID3D11DeviceContext _ctx;
-    private readonly ID3D11ComputeShader _stress, _compare, _fill, _verify;
+    private readonly ID3D11ComputeShader _stress, _compare, _fill, _verify, _peak, _copy;
     private readonly ID3D11Buffer _params, _result, _resultStaging;
     private readonly ID3D11UnorderedAccessView _resultUav;
 
@@ -86,6 +86,8 @@ internal sealed class D3D11GpuTester : IDisposable
         _compare = CreateShader("Compare");
         _fill = CreateShader("Fill");
         _verify = CreateShader("Verify");
+        _peak = CreateShader("Peak");
+        _copy = CreateShader("Copy");
 
         _params = _device.CreateBuffer(new BufferDescription((uint)Marshal.SizeOf<Params>(), BindFlags.ConstantBuffer));
         _result = CreateRawBuffer(16);
@@ -244,6 +246,101 @@ internal sealed class D3D11GpuTester : IDisposable
         _ctx.Dispatch(StressGroups, 1, 1);
         ReadResult();
         return sw.Elapsed.TotalMilliseconds;
+    }
+
+    // ------------------------------------------------------------------
+    // Đối chiếu thông số
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Đo sức tính và băng thông VRAM, mỗi thứ khoảng nửa giây, lấy lần tốt nhất trong ba.
+    /// Chạy trước bài tải khi card còn nguội để con số không bị kéo xuống vì hạ xung do nhiệt.
+    /// </summary>
+    public void RunSpecProbe(GpuTestResult result, CancellationToken ct)
+    {
+        result.PeakGflops = MeasurePeak(ct);
+        result.MemoryBandwidthGBps = MeasureBandwidth(ct);
+    }
+
+    private double MeasurePeak(CancellationToken ct)
+    {
+        const uint groups = 4096;
+        const uint threads = groups * GpuShaders.ThreadsPerGroup;
+        using var output = CreateRawBuffer(threads * 16);
+        using var outputUav = CreateRawUav(output, threads * 16);
+
+        _ctx.CSSetConstantBuffer(0, _params);
+        BindData(outputUav);
+        _ctx.CSSetShader(_peak);
+
+        double Time(uint iterations, int dispatches)
+        {
+            SetParams(new Params { ElementCount = threads, Iterations = iterations });
+            var sw = Stopwatch.StartNew();
+            for (var i = 0; i < dispatches; i++) _ctx.Dispatch(groups, 1, 1);
+            ReadResult();
+            return sw.Elapsed.TotalSeconds;
+        }
+
+        // Tăng số vòng tới khi một lệnh mất ~20 ms: đủ dài để bỏ qua chi phí gọi lệnh, đủ ngắn để không chạm TDR.
+        uint iterations = 64;
+        Time(iterations, 1);
+        while (iterations < 1u << 18)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (Time(iterations, 1) >= 0.02) break;
+            iterations *= 2;
+        }
+
+        var best = 0d;
+        for (var round = 0; round < 3; round++)
+        {
+            ct.ThrowIfCancellationRequested();
+            const int dispatches = 8;
+            var seconds = Time(iterations, dispatches);
+            var flops = (double)threads * iterations * GpuShaders.PeakFlopsPerIteration * dispatches;
+            best = Math.Max(best, flops / Math.Max(seconds, 1e-6) / 1e9);
+        }
+        return best;
+    }
+
+    private double MeasureBandwidth(CancellationToken ct)
+    {
+        var bytes = DedicatedVideoMemory >= 1L << 30 ? 128u * 1024 * 1024 : 32u * 1024 * 1024;
+        using var source = CreateRawBuffer(bytes);
+        using var sourceUav = CreateRawUav(source, bytes);
+        using var target = CreateRawBuffer(bytes);
+        using var targetUav = CreateRawUav(target, bytes);
+
+        const uint groups = 8192;
+        var p = new Params { ElementCount = bytes / 16, Stride = groups * GpuShaders.ThreadsPerGroup };
+
+        _ctx.CSSetConstantBuffer(0, _params);
+        _ctx.CSSetUnorderedAccessViews(0, new[] { sourceUav, _resultUav, targetUav });
+        _ctx.CSSetShader(_copy);
+        SetParams(p);
+
+        double Time(int dispatches)
+        {
+            var sw = Stopwatch.StartNew();
+            for (var i = 0; i < dispatches; i++) _ctx.Dispatch(groups, 1, 1);
+            ReadResult();
+            return sw.Elapsed.TotalSeconds;
+        }
+
+        Time(1); // lượt khởi động
+        var perCopy = Math.Max(Time(1), 1e-4);
+        var dispatchesPerRound = (int)Math.Clamp(0.15 / perCopy, 2, 64);
+
+        var best = 0d;
+        for (var round = 0; round < 3; round++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var seconds = Time(dispatchesPerRound);
+            // Mỗi lần chép đọc và ghi toàn bộ vùng nhớ: tính cả hai chiều như thông số của hãng.
+            best = Math.Max(best, 2.0 * bytes * dispatchesPerRound / Math.Max(seconds, 1e-6) / 1e9);
+        }
+        return best;
     }
 
     // ------------------------------------------------------------------
@@ -434,6 +531,8 @@ internal sealed class D3D11GpuTester : IDisposable
         _resultStaging.Dispose();
         _result.Dispose();
         _params.Dispose();
+        _copy.Dispose();
+        _peak.Dispose();
         _verify.Dispose();
         _fill.Dispose();
         _compare.Dispose();

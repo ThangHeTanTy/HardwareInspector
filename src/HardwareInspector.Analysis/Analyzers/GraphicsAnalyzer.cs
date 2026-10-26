@@ -179,6 +179,67 @@ public sealed class GraphicsAnalyzer : IComponentAnalyzer
     /// Kết quả bài kiểm tra GPU trong ứng dụng. Lỗi VRAM và lệch kết quả tính toán
     /// là bằng chứng cứng: phần mềm tự so từng bit, không suy diễn.
     /// </summary>
+    /// <summary>
+    /// So sức tính và băng thông VRAM đo được với thông số chính hãng của model card đang khai.
+    ///
+    /// Phép đo đơn giản thường đạt 60–95% con số lý thuyết. Card bị nạp vBIOS đổi tên (GT 730
+    /// khai là GTX 1050, GTX 1050 khai là GTX 1060...) mang nhân và bus nhớ đời thấp nên hụt
+    /// xuống dưới một nửa ở cả hai con số. Đòi cả hai cùng thấp mới kết luận, để một lần đo
+    /// lệch vì máy đang bận không bị coi là gian lận.
+    /// </summary>
+    private void CheckAgainstSpec(ScoreCard card, GpuTestResult test)
+    {
+        if (test.PeakGflops is not { } gflops || test.MemoryBandwidthGBps is not { } gbps) return;
+
+        card.Metric(S("Sức tính FP32 đo được", "Measured FP32 compute"), $"{gflops / 1000:0.00} TFLOPS")
+            .Metric(S("Băng thông VRAM đo được", "Measured VRAM bandwidth"), $"{gbps:0} GB/s");
+
+        if (Core.Gpu.GpuSpecCatalog.Find(test.AdapterName) is not { } spec) return;
+
+        var computeRatio = gflops / (spec.Fp32Tflops * 1000);
+        var bandwidthRatio = gbps / spec.BandwidthGBps;
+        var vramGb = test.DedicatedVideoMemoryBytes / 1024.0 / 1024 / 1024;
+
+        card.Metric(S($"So với thông số {spec.Model}", $"Against {spec.Model} spec"),
+            S($"tính toán {computeRatio:P0} · băng thông {bandwidthRatio:P0}", $"compute {computeRatio:P0} · bandwidth {bandwidthRatio:P0}"),
+            S($"Chính hãng: {spec.Fp32Tflops:0.##} TFLOPS, {spec.BandwidthGBps:0} GB/s. Card khoẻ thường đạt 60–95%.",
+              $"Official: {spec.Fp32Tflops:0.##} TFLOPS, {spec.BandwidthGBps:0} GB/s. A healthy card usually reaches 60–95%."),
+            computeRatio < 0.45 && bandwidthRatio < 0.45 ? Severity.Critical : Severity.Info);
+
+        if (computeRatio < 0.45 && bandwidthRatio < 0.45)
+            card.Add("GPU-SPEC-001", Kind, Severity.Critical,
+                S($"Hiệu năng chỉ bằng {computeRatio:P0} sức tính và {bandwidthRatio:P0} băng thông của {spec.Model}",
+                  $"Performance is only {computeRatio:P0} of the compute and {bandwidthRatio:P0} of the bandwidth of a {spec.Model}"),
+                S($"Đo được {gflops / 1000:0.00} TFLOPS và {gbps:0} GB/s, trong khi {spec.Model} chính hãng đạt {spec.Fp32Tflops:0.##} TFLOPS " +
+                  $"và {spec.BandwidthGBps:0} GB/s. Thấp cả hai cùng lúc như vậy là dấu hiệu điển hình của card đời thấp được nạp vBIOS " +
+                  "để báo tên model cao hơn — loại hàng hay gặp ở thị trường card cũ giá rẻ.",
+                  $"Measured {gflops / 1000:0.00} TFLOPS and {gbps:0} GB/s, while a genuine {spec.Model} reaches {spec.Fp32Tflops:0.##} TFLOPS " +
+                  $"and {spec.BandwidthGBps:0} GB/s. Both being this low at once is the classic sign of a lower-end card flashed with a vBIOS " +
+                  "that reports a higher model — common among cheap used graphics cards."),
+                S("Đối chiếu bằng GPU-Z: xem mục GPU (tên chip), Shaders và Bus Width so với thông số chính hãng. " +
+                  "Đóng mọi ứng dụng rồi chạy lại bài kiểm tra; nếu vẫn thấp, không mua.",
+                  "Cross-check with GPU-Z: compare the GPU (chip name), Shaders and Bus Width fields with the official specs. " +
+                  "Close all apps and run the test again; if it is still low, do not buy."),
+                penalty: 50, confidence: 0.75, source: EvidenceSource.Benchmark);
+        else if (bandwidthRatio < 0.35)
+            card.Add("GPU-SPEC-002", Kind, Severity.Warning,
+                S($"Băng thông VRAM chỉ bằng {bandwidthRatio:P0} thông số {spec.Model}", $"VRAM bandwidth is only {bandwidthRatio:P0} of the {spec.Model} spec"),
+                S("Bộ nhớ card chạy chậm bất thường: có thể là bản dùng bus nhớ hẹp hơn hoặc chip nhớ đời cũ, hoặc VRAM đang bị hạ xung.",
+                  "The card's memory is abnormally slow: it may be a variant with a narrower bus or older memory chips, or the VRAM is down-clocked."),
+                S("Xem mục Bus Width và Memory Type trong GPU-Z, so với thông số chính hãng.",
+                  "Check Bus Width and Memory Type in GPU-Z against the official specs."),
+                penalty: 18, confidence: 0.6, source: EvidenceSource.Benchmark);
+
+        if (vramGb > 0 && vramGb < spec.MinVramGb * 0.9)
+            card.Add("GPU-SPEC-003", Kind, Severity.Warning,
+                S($"VRAM chỉ có {vramGb:0.#} GB, ít hơn mọi phiên bản {spec.Model} ({spec.MinVramGb:0.#} GB trở lên)",
+                  $"Only {vramGb:0.#} GB of VRAM, less than any {spec.Model} variant ({spec.MinVramGb:0.#} GB or more)"),
+                S("Dung lượng VRAM do chính card báo về thấp hơn mọi bản chính hãng của model này.",
+                  "The VRAM size reported by the card is below every official variant of this model."),
+                S("Đối chiếu mục Memory Size trong GPU-Z.", "Cross-check Memory Size in GPU-Z."),
+                penalty: 20, confidence: 0.7, source: EvidenceSource.Benchmark);
+    }
+
     private void AddStressTestResults(ScoreCard card, GpuTestResult test)
     {
         if (test.SetupError is not null && !test.DeviceLost)
@@ -187,6 +248,8 @@ public sealed class GraphicsAnalyzer : IComponentAnalyzer
                 test.SetupError, Severity.Notice);
             return;
         }
+
+        CheckAgainstSpec(card, test);
 
         if (test.ComputeChecks > 0)
             card.Metric(S("Bài tải GPU", "GPU stress run"),

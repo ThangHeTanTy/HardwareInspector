@@ -53,6 +53,9 @@ public sealed class PurchaseAdvisor
         if (Has("AUTH-GPU-001"))
             b.Add(S("Tên card đồ hoạ không khớp mã phần cứng — card có thể bị nạp vBIOS của model khác.",
                     "The graphics card name does not match its hardware ID — it may carry another model's vBIOS."));
+        if (Has("GPU-SPEC-003"))
+            b.Add(S("Card đồ hoạ có ít VRAM hơn mọi phiên bản chính hãng của model nó khai.",
+                    "The graphics card has less VRAM than any official variant of the model it claims."));
         if (Has("GPU-SPEC-001"))
             b.Add(S("Hiệu năng card đồ hoạ thấp hơn nhiều so với model nó khai — nhiều khả năng là card đời thấp bị đổi tên.",
                     "Graphics performance is far below the model it claims — most likely a lower-end card renamed."));
