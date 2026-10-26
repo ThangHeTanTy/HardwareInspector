@@ -11,6 +11,9 @@ using static HardwareInspector.Core.Localization.Loc;
 
 namespace HardwareInspector.App.Views.DeviceTest;
 
+/// <summary>Các bài thử trong cửa sổ, để chế độ kiểm tra từng bước mở thẳng đúng bài.</summary>
+public enum DeviceTestTab { Keyboard, Pointer, Speakers, Microphone, Camera, Usb, Wireless, Screen, Battery }
+
 /// <summary>
 /// Thử các thiết bị vào ra mà người mua hay bỏ sót: bàn phím, touchpad/chuột, loa, micro, webcam.
 ///
@@ -37,10 +40,15 @@ public sealed class DeviceTestWindow : Window
     private readonly KeyboardHook _hook = new();
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(50) };
 
-    public DeviceTestWindow(DeviceTestResult result, bool isLaptop)
+    private readonly Dictionary<DeviceTestTab, TabItem> _tabByKind = new();
+    private readonly Action? _openScreenTest;
+
+    /// <param name="openScreenTest">Mở bài kiểm tra màn hình toàn màn hình của cửa sổ chính.</param>
+    public DeviceTestWindow(DeviceTestResult result, bool isLaptop, Action? openScreenTest = null)
     {
         _result = result;
         _isLaptop = isLaptop;
+        _openScreenTest = openScreenTest;
 
         Title = S("Thử bàn phím và thiết bị", "Keyboard and device test");
         Width = 1180;
@@ -53,14 +61,15 @@ public sealed class DeviceTestWindow : Window
 
         _tabs.Background = Brushes.Transparent;
         _tabs.BorderThickness = new Thickness(0);
-        _tabs.Items.Add(Tab(S("Bàn phím", "Keyboard"), BuildKeyboard()));
-        _tabs.Items.Add(Tab(S("Touchpad / chuột", "Touchpad / mouse"), BuildPointer()));
-        _tabs.Items.Add(Tab(S("Loa", "Speakers"), BuildSpeakers()));
-        _tabs.Items.Add(Tab("Micro", BuildMicrophone()));
-        _tabs.Items.Add(Tab("Webcam", BuildCamera()));
-        _usbTab = Tab(S("Cổng USB", "USB ports"), BuildUsb());
-        _tabs.Items.Add(_usbTab);
-        if (_isLaptop) _tabs.Items.Add(Tab(S("Pin", "Battery"), BuildBattery()));
+        AddTab(DeviceTestTab.Keyboard, S("Bàn phím", "Keyboard"), BuildKeyboard());
+        AddTab(DeviceTestTab.Pointer, S("Touchpad / chuột", "Touchpad / mouse"), BuildPointer());
+        AddTab(DeviceTestTab.Speakers, S("Loa", "Speakers"), BuildSpeakers());
+        AddTab(DeviceTestTab.Microphone, "Micro", BuildMicrophone());
+        AddTab(DeviceTestTab.Camera, "Webcam", BuildCamera());
+        _usbTab = AddTab(DeviceTestTab.Usb, S("Cổng USB", "USB ports"), BuildUsb());
+        AddTab(DeviceTestTab.Wireless, "Wi-Fi & Bluetooth", BuildWireless());
+        AddTab(DeviceTestTab.Screen, S("Màn hình", "Screen"), BuildScreen());
+        if (_isLaptop) AddTab(DeviceTestTab.Battery, S("Pin", "Battery"), BuildBattery());
         _tabs.SelectionChanged += (_, e) => { if (e.Source == _tabs) UpdateHook(); };
 
         var close = new Button { Content = S("Xong — lưu kết quả", "Done — save results"), Padding = new Thickness(16, 6, 16, 6) };
@@ -528,6 +537,87 @@ public sealed class DeviceTestWindow : Window
         panel.Children.Add(list);
         panel.Children.Add(open);
         panel.Children.Add(VerdictRow("Webcam", _result.CameraOk, v => _result.CameraOk = v));
+        return Card(panel);
+    }
+
+    private TabItem AddTab(DeviceTestTab kind, string header, UIElement content)
+    {
+        var tab = Tab(header, content);
+        _tabByKind[kind] = tab;
+        _tabs.Items.Add(tab);
+        return tab;
+    }
+
+    /// <summary>Chuyển sang một bài thử; máy bàn không có tab Pin thì giữ nguyên.</summary>
+    public void SelectTab(DeviceTestTab kind)
+    {
+        if (_tabByKind.TryGetValue(kind, out var tab)) _tabs.SelectedItem = tab;
+    }
+
+    // ==================================================================
+    // Wi-Fi & Bluetooth
+    // ==================================================================
+
+    private UIElement BuildWireless()
+    {
+        var state = new TextBlock { Foreground = BrText, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12), Text = S("Đang dò card mạng không dây…", "Detecting wireless adapters…") };
+
+        void Refresh() => _ = Task.Run(Collectors.Components.WirelessProbe.Read).ContinueWith(t =>
+        {
+            if (!t.IsCompletedSuccessfully) return;
+            var w = t.Result;
+            _result.WifiAdapter = w.WifiAdapter;
+            var wifi = w.WifiAdapter is null
+                ? S("Card Wi-Fi: KHÔNG THẤY — card có thể đã bị tháo, hỏng, hoặc thiếu driver.",
+                    "Wi-Fi adapter: NOT FOUND — it may have been removed, be broken, or lack a driver.")
+                : S($"Card Wi-Fi: {w.WifiAdapter} — {(w.WifiConnected ? "đang kết nối" : w.WifiEnabled ? "đang bật, chưa kết nối" : "đang tắt")}",
+                    $"Wi-Fi adapter: {w.WifiAdapter} — {(w.WifiConnected ? "connected" : w.WifiEnabled ? "on, not connected" : "off")}");
+            var bt = w.BluetoothDevices.Count == 0
+                ? S("Bluetooth: không thấy thiết bị Bluetooth nào.", "Bluetooth: no Bluetooth device found.")
+                : "Bluetooth: " + string.Join(", ", w.BluetoothDevices);
+            state.Text = wifi + "\n" + bt;
+        }, TaskScheduler.FromCurrentSynchronizationContext());
+
+        var refresh = new Button { Content = S("Dò lại", "Detect again"), Padding = new Thickness(12, 4, 12, 4), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 12) };
+        refresh.Click += (_, _) => Refresh();
+        var settings = new Button { Content = S("Mở cài đặt Bluetooth", "Open Bluetooth settings"), Padding = new Thickness(12, 4, 12, 4), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 16) };
+        settings.Click += (_, _) =>
+        {
+            try { Process.Start(new ProcessStartInfo("ms-settings:bluetooth") { UseShellExecute = true }); } catch { }
+        };
+
+        var panel = new StackPanel();
+        panel.Children.Add(Hint(S(
+            "Nhìn thấy card trong danh sách chưa đủ. Kết nối Wi-Fi thật (mạng điện thoại phát cũng được), mở một trang web hoặc chạy " +
+            "Speedtest; đi xa máy vài mét xem sóng có tụt mạnh không. Với Bluetooth, ghép thử điện thoại hoặc tai nghe.",
+            "Seeing the adapter is not enough. Connect to a real Wi-Fi network (a phone hotspot works), open a website or run " +
+            "Speedtest, and walk a few metres away to see whether the signal drops sharply. For Bluetooth, pair a phone or headphones.")));
+        panel.Children.Add(state);
+        panel.Children.Add(refresh);
+        panel.Children.Add(settings);
+        panel.Children.Add(VerdictRow("Wi-Fi", _result.WifiOk, v => _result.WifiOk = v));
+        panel.Children.Add(VerdictRow("Bluetooth", _result.BluetoothOk, v => _result.BluetoothOk = v));
+        Refresh();
+        return Card(panel);
+    }
+
+    // ==================================================================
+    // Màn hình
+    // ==================================================================
+
+    private UIElement BuildScreen()
+    {
+        var open = new Button { Content = S("Mở bài kiểm tra màn hình", "Open the screen test"), Padding = new Thickness(14, 6, 14, 6), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 16), IsEnabled = _openScreenTest is not null };
+        open.Click += (_, _) => _openScreenTest?.Invoke();
+
+        var panel = new StackPanel();
+        panel.Children.Add(Hint(S(
+            "Bài kiểm tra chạy toàn màn hình qua nền đen, trắng, đỏ, lục, lam, xám và dải chuyển màu. Làm trong phòng tối. " +
+            "Không đạt nếu có điểm chết hoặc điểm sáng ở giữa màn, hở sáng loang rộng, ám màu theo vùng, sọc hoặc nhấp nháy.",
+            "The test cycles full screen through black, white, red, green, blue, grey and gradients. Do it in a dark room. " +
+            "Fail it for dead or stuck pixels near the centre, wide backlight bleed, patchy colour tint, stripes or flicker.")));
+        panel.Children.Add(open);
+        panel.Children.Add(VerdictRow(S("Màn hình", "Screen"), _result.ScreenOk, v => _result.ScreenOk = v));
         return Card(panel);
     }
 

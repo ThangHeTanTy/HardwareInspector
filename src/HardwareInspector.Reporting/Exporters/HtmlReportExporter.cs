@@ -259,6 +259,9 @@ public sealed class HtmlReportExporter : IReportExporter
             (S("Loa phải", "Right speaker"), t.SpeakerRightOk, string.Empty),
             ("Micro", t.MicOk, t.MicPeakDb is { } db ? S($"To nhất đã thu {db:0} dB", $"Loudest captured {db:0} dB") : string.Empty),
             ("Webcam", t.CameraOk, string.Join(", ", t.Cameras)),
+            (S("Màn hình", "Screen"), t.ScreenOk, string.Empty),
+            ("Wi-Fi", t.WifiOk, t.WifiAdapter ?? string.Empty),
+            ("Bluetooth", t.BluetoothOk, string.Empty),
             (S("Cổng USB", "USB ports"), t.UsbOk, S($"{t.UsbPortsSeen.Count}{(t.UsbPortsExpected is { } e ? $"/{e}" : string.Empty)} cổng nhận thiết bị",
                                                      $"{t.UsbPortsSeen.Count}{(t.UsbPortsExpected is { } e2 ? $"/{e2}" : string.Empty)} ports responded")),
         };

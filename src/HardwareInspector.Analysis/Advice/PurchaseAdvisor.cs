@@ -94,6 +94,9 @@ public sealed class PurchaseAdvisor
         if (has(new[] { "FW-SB-001" }))
             c.Add(S("Khôi phục khoá Secure Boot gốc (Restore Factory Keys) và bật lại Secure Boot.",
                     "Restore the original Secure Boot keys (Restore Factory Keys) and turn Secure Boot back on."));
+        if (s.DeviceTests.ScreenOk == false && !s.IsLaptop)
+            c.Add(S("Màn hình rời bài soi không đạt — trả giá riêng phần màn hoặc không lấy màn.",
+                    "The external monitor failed the screen test — negotiate it separately or leave it out."));
         if (!s.OperatingSystem.IsActivated)
             c.Add(S("Hỏi rõ Windows có bản quyền không — hiện chưa kích hoạt.",
                     "Ask whether Windows is licensed — it is not activated right now."));
@@ -196,6 +199,20 @@ public sealed class PurchaseAdvisor
                 S("Micro không thu được tiếng. Nếu không cần gọi video, có thể dùng tai nghe có micro thay thế.",
                   "The microphone picks up nothing. If you do not need video calls, a headset with a mic is a workaround."),
                 150_000, 450_000));
+
+        if (t.WifiOk == false || t.BluetoothOk == false)
+            costs.Add(new CostItem(CostKind.Repair, ComponentKind.Motherboard,
+                laptop ? S("Thay card Wi-Fi/Bluetooth", "Replace the Wi-Fi/Bluetooth card") : S("Thêm card hoặc USB Wi-Fi/Bluetooth", "Add a Wi-Fi/Bluetooth card or USB adapter"),
+                S($"{(t.WifiOk == false ? "Wi-Fi" : string.Empty)}{(t.WifiOk == false && t.BluetoothOk == false ? " và " : string.Empty)}{(t.BluetoothOk == false ? "Bluetooth" : string.Empty)} không đạt. Hai thứ thường chung một card.",
+                  $"{(t.WifiOk == false ? "Wi-Fi" : string.Empty)}{(t.WifiOk == false && t.BluetoothOk == false ? " and " : string.Empty)}{(t.BluetoothOk == false ? "Bluetooth" : string.Empty)} failed. Both usually share one card."),
+                laptop ? 200_000 : 150_000, laptop ? 500_000 : 350_000));
+
+        if (t.ScreenOk == false && laptop)
+            costs.Add(new CostItem(CostKind.Repair, ComponentKind.Display,
+                S("Thay tấm nền màn hình laptop", "Replace the laptop screen panel"),
+                S("Bài soi màn hình không đạt (điểm chết, hở sáng, ám màu hoặc sọc). Tấm nền IPS/độ phân giải cao ở mức giá trên.",
+                  "The screen test failed (dead pixels, bleed, tint or stripes). IPS / high-resolution panels cost toward the top of the range."),
+                1_200_000, 3_500_000));
 
         if (t.UsbOk == false)
             costs.Add(new CostItem(CostKind.Repair, ComponentKind.Motherboard,

@@ -47,6 +47,19 @@ và mật khẩu BIOS.
 bấm nhiều phím cùng lúc; thử touchpad phủ kín vùng, click và cuộn; loa trái/phải riêng từng bên và
 bài quét âm nghe rè; đo mức thu micro; mở webcam. Kết quả Đạt / Không đạt được tính vào chi phí khắc phục.
 
+**Kiểm tra từng bước:** nút *Kiểm tra từng bước* dẫn người mới đi qua đủ trình tự — quét máy, chạy tải,
+bàn phím, touchpad, loa/micro/webcam, màn hình, cổng USB, Wi-Fi/Bluetooth, pin — bước nào xong được đánh dấu,
+cuối cùng mở thẳng kết luận.
+
+**Đo pin thật:** rút sạc 5–15 phút, ứng dụng đọc dung lượng và công suất xả của pin rồi quy ra số giờ dùng
+thực tế. **Cổng USB:** cắm một USB lần lượt vào từng cổng, ứng dụng ghi nhận cổng nào hoạt động.
+
+**So sánh nhiều máy:** nhập giá người bán (gõ "12,5tr", "12.500.000" hay "800k" đều được) rồi lưu; tab
+*So sánh máy* tính tổng tiền thật phải bỏ ra (giá + chi phí sửa) và chỉ ra máy đáng tiền nhất.
+
+**Chạy từ USB:** `tools\publish-portable.cmd` đóng gói bản tự chứa, không cần cài .NET. Chạy từ ổ USB (hoặc
+có file `portable.txt` cạnh .exe) thì cài đặt, danh sách so sánh và biên bản đều ghi cạnh .exe.
+
 Màn hình nối qua bộ chuyển đổi (ví dụ màn VGA cắm qua chip DisplayPort→VGA) có thể bị nhận sai cổng;
 khi đó chọn tay "Cổng thật của màn hình" trong phần Màn hình, lựa chọn được ghi nhớ cho lần sau.
 

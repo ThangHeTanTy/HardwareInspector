@@ -40,8 +40,12 @@
 
       <WrapPanel HorizontalAlignment="Right" VerticalAlignment="Center"
                  Orientation="Horizontal" ItemHeight="42">
+        <Button Content="{Binding [Btn.Guided], Source={StaticResource Ui}}" Command="{Binding GuidedCommand}"
+                Style="{StaticResource PrimaryButton}" Margin="0,0,8,4"
+                ToolTip="{Binding [Btn.Guided.Tip], Source={StaticResource Ui}}" />
+
         <Button Content="{Binding [Btn.Scan], Source={StaticResource Ui}}" Command="{Binding ScanCommand}"
-                Style="{StaticResource PrimaryButton}" Margin="0,0,8,4" />
+                Margin="0,0,8,4" />
 
         <Button Content="{Binding [Btn.Stress], Source={StaticResource Ui}}" Command="{Binding StressCommand}" Margin="0,0,8,4"
                 ToolTip="{Binding [Btn.Stress.Tip], Source={StaticResource Ui}}" />
@@ -201,6 +205,7 @@
 
     <!-- ========== Nội dung ========== -->
     <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0"
+                SelectedIndex="{Binding SelectedMainTab, Mode=TwoWay}"
                 Foreground="{StaticResource TextBrush}">
 
       <!-- Tab 1: Linh kiện -->
@@ -554,6 +559,87 @@
 
               <TextBlock Text="{Binding [Advice.PriceNote], Source={StaticResource Ui}}" Style="{StaticResource Dim}"
                          FontSize="11.5" TextWrapping="Wrap" />
+
+              <!-- Lưu máy đang xem vào danh sách so sánh, kèm giá người bán -->
+              <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Margin="0,18,0,0" Padding="0,14,0,0">
+                <StackPanel>
+                  <TextBlock Text="{Binding [Compare.SaveHeader], Source={StaticResource Ui}}" Style="{StaticResource H2}" />
+                  <WrapPanel>
+                    <StackPanel Margin="0,0,12,8">
+                      <TextBlock Text="{Binding [Compare.Nickname], Source={StaticResource Ui}}" Style="{StaticResource Dim}" Margin="0,0,0,3" />
+                      <TextBox Text="{Binding CompareNickname, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource InputBox}" Width="260" />
+                    </StackPanel>
+                    <StackPanel Margin="0,0,12,8">
+                      <TextBlock Text="{Binding [Compare.Price], Source={StaticResource Ui}}" Style="{StaticResource Dim}" Margin="0,0,0,3" />
+                      <TextBox Text="{Binding ComparePrice, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource InputBox}" Width="180" />
+                    </StackPanel>
+                    <Button Content="{Binding [Compare.Save], Source={StaticResource Ui}}" Command="{Binding SaveComparisonCommand}"
+                            VerticalAlignment="Bottom" Margin="0,0,0,8" />
+                  </WrapPanel>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+      </TabItem>
+
+      <!-- Tab: So sánh các máy đã đi xem -->
+      <TabItem Header="{Binding [Tab.Compare], Source={StaticResource Ui}}">
+        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+          <ScrollViewer>
+            <StackPanel>
+              <TextBlock Text="{Binding [Compare.Eyebrow], Source={StaticResource Ui}}" Style="{StaticResource Eyebrow}" />
+              <TextBlock Text="{Binding [Compare.Intro], Source={StaticResource Ui}}" Style="{StaticResource Dim}"
+                         TextWrapping="Wrap" Margin="0,6,0,12" />
+              <TextBlock Text="{Binding ComparisonVerdict}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"
+                         Margin="0,0,0,14" />
+
+              <ItemsControl ItemsSource="{Binding ComparisonRows}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border CornerRadius="8" Padding="14,10" Margin="0,0,0,8" BorderThickness="1">
+                      <Border.Style>
+                        <Style TargetType="Border">
+                          <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsBest}" Value="True">
+                              <Setter Property="BorderBrush" Value="#2FBF71" />
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </Border.Style>
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                          <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Nickname}" FontWeight="Bold" FontSize="14" />
+                            <TextBlock Text="{Binding [Compare.Best], Source={StaticResource Ui}}" Foreground="#2FBF71"
+                                       FontWeight="Bold" FontSize="11" Margin="10,2,0,0"
+                                       Visibility="{Binding IsBest, Converter={StaticResource BoolToVisibility}}" />
+                          </StackPanel>
+                          <TextBlock Text="{Binding Title}" Style="{StaticResource Dim}" FontSize="11.5" />
+                          <TextBlock Text="{Binding Specs}" TextWrapping="Wrap" Margin="0,4,0,6" />
+                          <WrapPanel>
+                            <TextBlock Margin="0,0,18,0"><Run Text="{Binding [Compare.Score], Source={StaticResource Ui}, Mode=OneWay}" Foreground="#9AA0AA" /><Run Text=" " /><Run Text="{Binding Score, Mode=OneWay}" FontWeight="SemiBold" /></TextBlock>
+                            <TextBlock Text="{Binding Decision}" FontWeight="SemiBold" Margin="0,0,18,0"
+                                       Foreground="{Binding DecisionColor, Converter={StaticResource HexToBrush}}" />
+                            <TextBlock Margin="0,0,18,0"><Run Text="{Binding [Compare.Price.Short], Source={StaticResource Ui}, Mode=OneWay}" Foreground="#9AA0AA" /><Run Text=" " /><Run Text="{Binding Price, Mode=OneWay}" /></TextBlock>
+                            <TextBlock Margin="0,0,18,0"><Run Text="{Binding [Compare.Repairs], Source={StaticResource Ui}, Mode=OneWay}" Foreground="#9AA0AA" /><Run Text=" " /><Run Text="{Binding Repairs, Mode=OneWay}" /></TextBlock>
+                            <TextBlock><Run Text="{Binding [Compare.Total], Source={StaticResource Ui}, Mode=OneWay}" Foreground="#9AA0AA" /><Run Text=" " /><Run Text="{Binding Total, Mode=OneWay}" FontWeight="Bold" /></TextBlock>
+                          </WrapPanel>
+                          <TextBlock Text="{Binding Note}" Style="{StaticResource Dim}" FontSize="11.5" Margin="0,4,0,0"
+                                     Visibility="{Binding Note, Converter={StaticResource NullToVisibility}}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="{Binding [Compare.Remove], Source={StaticResource Ui}}"
+                                Command="{Binding Remove}" VerticalAlignment="Top" Margin="12,0,0,0" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
             </StackPanel>
           </ScrollViewer>
         </Border>

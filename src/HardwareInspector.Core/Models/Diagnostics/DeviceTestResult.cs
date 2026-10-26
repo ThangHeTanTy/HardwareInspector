@@ -40,6 +40,14 @@ public sealed class DeviceTestResult
     public double? MicPeakDb { get; set; }
     public bool? MicOk { get; set; }
 
+    // --- Wi-Fi, Bluetooth, màn hình ---
+    public string? WifiAdapter { get; set; }
+    public bool? WifiOk { get; set; }
+    public bool? BluetoothOk { get; set; }
+
+    /// <summary>Kết quả bài soi điểm chết, hở sáng, ám màu do người dùng chấm.</summary>
+    public bool? ScreenOk { get; set; }
+
     // --- Cổng USB ---
     /// <summary>Các vị trí cổng đã nhận thiết bị trong bài thử.</summary>
     public List<string> UsbPortsSeen { get; } = new();
@@ -64,5 +72,6 @@ public sealed class DeviceTestResult
 
     public bool Any =>
         KeyboardOk.HasValue || TouchpadOk.HasValue || SpeakerLeftOk.HasValue || SpeakerRightOk.HasValue ||
-        MicOk.HasValue || CameraOk.HasValue || BatteryRuntimeHours.HasValue || UsbOk.HasValue;
+        MicOk.HasValue || CameraOk.HasValue || BatteryRuntimeHours.HasValue || UsbOk.HasValue ||
+        WifiOk.HasValue || BluetoothOk.HasValue || ScreenOk.HasValue;
 }
