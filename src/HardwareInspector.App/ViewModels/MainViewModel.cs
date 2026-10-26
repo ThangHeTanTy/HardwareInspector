@@ -326,6 +326,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public string MachineTitle => _assessment?.MachineTitle ?? Environment.MachineName;
     public string SummaryText => _assessment?.Summary ?? string.Empty;
 
+    /// <summary>Nhắc người dùng đang ở chế độ chạy từ USB: dữ liệu và biên bản ghi cạnh file .exe.</summary>
+    public string? PortableNote => AppPaths.IsPortable ? Ui["Status.Portable"] : null;
+
     /// <summary>Thẻ kết luận chiếm 40% chiều cao vùng dưới thanh lệnh; chưa có kết quả thì co về 0.</summary>
     public System.Windows.GridLength VerdictRowHeight => HasResult
         ? new System.Windows.GridLength(2, System.Windows.GridUnitType.Star)
@@ -687,9 +690,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         try
         {
-            var folder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "HardwareInspector");
+            var folder = AppPaths.ReportsDirectory;
             var safeName = string.Join("_", MachineTitle.Split(Path.GetInvalidFileNameChars()));
             var file = Path.Combine(folder,
                 $"BienBanKiemTra_{safeName}_{DateTime.Now:yyyyMMdd_HHmm}{exporter.FileExtension}");

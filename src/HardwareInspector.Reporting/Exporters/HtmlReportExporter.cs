@@ -259,7 +259,13 @@ public sealed class HtmlReportExporter : IReportExporter
             (S("Loa phải", "Right speaker"), t.SpeakerRightOk, string.Empty),
             ("Micro", t.MicOk, t.MicPeakDb is { } db ? S($"To nhất đã thu {db:0} dB", $"Loudest captured {db:0} dB") : string.Empty),
             ("Webcam", t.CameraOk, string.Join(", ", t.Cameras)),
+            (S("Cổng USB", "USB ports"), t.UsbOk, S($"{t.UsbPortsSeen.Count}{(t.UsbPortsExpected is { } e ? $"/{e}" : string.Empty)} cổng nhận thiết bị",
+                                                     $"{t.UsbPortsSeen.Count}{(t.UsbPortsExpected is { } e2 ? $"/{e2}" : string.Empty)} ports responded")),
         };
+        if (t.BatteryRuntimeHours is { } hours)
+            rows.Add((S("Pin (đo xả thật)", "Battery (real discharge)"), hours >= 1.5,
+                S($"Dùng được khoảng {hours:0.0} giờ ở {t.BatteryDrainWatts:0.0} W, đo {t.BatteryTestMinutes:0} phút",
+                  $"About {hours:0.0} h at {t.BatteryDrainWatts:0.0} W, measured over {t.BatteryTestMinutes:0} min")));
 
         sb.Append($"<section><h2>{E(S("Thử thiết bị trong ứng dụng", "In-app device tests"))}</h2><table class=\"summary\"><tbody>");
         foreach (var (name, ok, detail) in rows)

@@ -130,11 +130,14 @@ public sealed class PurchaseAdvisor
                 30_000, 80_000));
 
         // --- Pin ---
-        if (s.PrimaryBattery is { } bat && (bat.HealthPercent is < 70 || bat.CycleCount is > 800))
+        var shortRuntime = s.DeviceTests.BatteryRuntimeHours is < 1.5;
+        if (s.PrimaryBattery is { } bat && (bat.HealthPercent is < 70 || bat.CycleCount is > 800 || shortRuntime))
             costs.Add(new CostItem(CostKind.Repair, ComponentKind.Battery,
                 S("Thay pin laptop", "Replace the laptop battery"),
-                S($"Pin còn {bat.HealthPercent:0}% dung lượng thiết kế{(bat.CycleCount is { } cy ? $", {cy:N0} chu kỳ" : string.Empty)}. Pin chính hãng ở mức giá cao.",
-                  $"Battery at {bat.HealthPercent:0}% of design capacity{(bat.CycleCount is { } cy2 ? $", {cy2:N0} cycles" : string.Empty)}. Genuine batteries cost toward the top of the range."),
+                S($"Pin còn {bat.HealthPercent:0}% dung lượng thiết kế{(bat.CycleCount is { } cy ? $", {cy:N0} chu kỳ" : string.Empty)}" +
+                  $"{(s.DeviceTests.BatteryRuntimeHours is { } rh ? $", đo thực tế dùng được {rh:0.0} giờ" : string.Empty)}. Pin chính hãng ở mức giá cao.",
+                  $"Battery at {bat.HealthPercent:0}% of design capacity{(bat.CycleCount is { } cy2 ? $", {cy2:N0} cycles" : string.Empty)}" +
+                  $"{(s.DeviceTests.BatteryRuntimeHours is { } rh2 ? $", measured runtime {rh2:0.0} h" : string.Empty)}. Genuine batteries cost toward the top of the range."),
                 600_000, 1_500_000));
 
         // --- Tản nhiệt ---
@@ -193,6 +196,13 @@ public sealed class PurchaseAdvisor
                 S("Micro không thu được tiếng. Nếu không cần gọi video, có thể dùng tai nghe có micro thay thế.",
                   "The microphone picks up nothing. If you do not need video calls, a headset with a mic is a workaround."),
                 150_000, 450_000));
+
+        if (t.UsbOk == false)
+            costs.Add(new CostItem(CostKind.Repair, ComponentKind.Motherboard,
+                S("Sửa cổng USB", "Repair USB ports"),
+                S($"Bài thử cổng USB không đạt ({t.UsbPortsSeen.Count}{(t.UsbPortsExpected is { } e ? $"/{e}" : string.Empty)} cổng nhận thiết bị). Thường là hàn lại chân cổng.",
+                  $"The USB port test failed ({t.UsbPortsSeen.Count}{(t.UsbPortsExpected is { } e2 ? $"/{e2}" : string.Empty)} ports responded). Usually the connector needs resoldering."),
+                laptop ? 200_000 : 100_000, laptop ? 600_000 : 400_000));
 
         if (laptop && t.CameraOk == false)
             costs.Add(new CostItem(CostKind.Repair, ComponentKind.Motherboard,

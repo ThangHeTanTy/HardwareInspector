@@ -142,6 +142,8 @@ public sealed class UiStrings : INotifyPropertyChanged
         // --- Trạng thái ---
         ["Status.Ready"] = new("Sẵn sàng. Nhấn \"Bắt đầu kiểm tra\" để quét toàn bộ máy.",
                               "Ready. Press \"Start inspection\" to scan the whole machine."),
+        ["Status.Portable"] = new("Chạy từ USB — biên bản lưu trong thư mục BienBan cạnh file .exe",
+                                  "Running from USB — reports are saved in the BienBan folder next to the .exe"),
         ["Status.Cancelled"] = new("Đã huỷ giữa chừng.", "Cancelled part-way through."),
         ["Status.StressStopped"] = new("Đã dừng bài kiểm tra tải.", "Stress test stopped."),
         ["Status.Starting"] = new("Đang khởi động", "Starting up"),

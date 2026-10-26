@@ -31,8 +31,7 @@ public partial class App : Application
     {
         try
         {
-            var folder = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "HardwareInspector");
+            var folder = Services.AppPaths.ReportsDirectory;
             System.IO.Directory.CreateDirectory(folder);
             System.IO.File.AppendAllText(
                 System.IO.Path.Combine(folder, "error.log"),

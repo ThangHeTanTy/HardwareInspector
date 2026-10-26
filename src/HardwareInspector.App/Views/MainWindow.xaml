@@ -777,7 +777,11 @@
     <!-- ========== Trạng thái ========== -->
     <Border Grid.Row="4" Margin="0,12,0,0" Padding="12,8"
             Background="{StaticResource PanelBrush}" CornerRadius="6">
-      <TextBlock Text="{Binding Status}" Style="{StaticResource Dim}" />
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Right" Text="{Binding PortableNote}" Foreground="#4C8DFF" Margin="12,0,0,0"
+                   Visibility="{Binding PortableNote, Converter={StaticResource NullToVisibility}}" />
+        <TextBlock Text="{Binding Status}" Style="{StaticResource Dim}" TextTrimming="CharacterEllipsis" />
+      </DockPanel>
     </Border>
   </Grid>
 </Window>

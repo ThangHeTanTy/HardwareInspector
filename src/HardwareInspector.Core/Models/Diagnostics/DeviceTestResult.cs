@@ -40,11 +40,29 @@ public sealed class DeviceTestResult
     public double? MicPeakDb { get; set; }
     public bool? MicOk { get; set; }
 
+    // --- Cổng USB ---
+    /// <summary>Các vị trí cổng đã nhận thiết bị trong bài thử.</summary>
+    public List<string> UsbPortsSeen { get; } = new();
+
+    /// <summary>Số cổng USB người dùng đếm được trên vỏ máy.</summary>
+    public int? UsbPortsExpected { get; set; }
+
+    public bool? UsbOk { get; set; }
+
+    // --- Pin: đo xả thật khi rút sạc ---
+    public double? BatteryTestMinutes { get; set; }
+
+    /// <summary>Công suất xả trung bình đo được, W.</summary>
+    public double? BatteryDrainWatts { get; set; }
+
+    /// <summary>Thời lượng dùng ước tính từ đầy tới cạn ở mức tải lúc đo, giờ.</summary>
+    public double? BatteryRuntimeHours { get; set; }
+
     // --- Webcam ---
     public List<string> Cameras { get; } = new();
     public bool? CameraOk { get; set; }
 
     public bool Any =>
         KeyboardOk.HasValue || TouchpadOk.HasValue || SpeakerLeftOk.HasValue || SpeakerRightOk.HasValue ||
-        MicOk.HasValue || CameraOk.HasValue;
+        MicOk.HasValue || CameraOk.HasValue || BatteryRuntimeHours.HasValue || UsbOk.HasValue;
 }

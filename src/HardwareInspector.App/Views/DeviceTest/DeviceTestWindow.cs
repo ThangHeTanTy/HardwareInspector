@@ -58,6 +58,9 @@ public sealed class DeviceTestWindow : Window
         _tabs.Items.Add(Tab(S("Loa", "Speakers"), BuildSpeakers()));
         _tabs.Items.Add(Tab("Micro", BuildMicrophone()));
         _tabs.Items.Add(Tab("Webcam", BuildCamera()));
+        _usbTab = Tab(S("Cổng USB", "USB ports"), BuildUsb());
+        _tabs.Items.Add(_usbTab);
+        if (_isLaptop) _tabs.Items.Add(Tab(S("Pin", "Battery"), BuildBattery()));
         _tabs.SelectionChanged += (_, e) => { if (e.Source == _tabs) UpdateHook(); };
 
         var close = new Button { Content = S("Xong — lưu kết quả", "Done — save results"), Padding = new Thickness(16, 6, 16, 6) };
@@ -529,6 +532,273 @@ public sealed class DeviceTestWindow : Window
     }
 
     // ==================================================================
+    // Cổng USB
+    // ==================================================================
+
+    private TabItem? _usbTab;
+    private HashSet<string>? _usbBaseline;
+    private readonly Dictionary<string, string> _usbPortNames = new();   // vị trí → "Cổng 1", "Cổng 2"...
+    private readonly StackPanel _usbLog = new();
+    private TextBlock _usbSummary = null!;
+    private DispatcherTimer? _usbTimer;
+    private bool _usbBusy;
+
+    private UIElement BuildUsb()
+    {
+        _usbSummary = new TextBlock { Foreground = BrText, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 16, 0), VerticalAlignment = VerticalAlignment.Center };
+
+        var expected = new ComboBox { Width = 90, Margin = new Thickness(8, 0, 16, 0) };
+        expected.Items.Add("—");
+        for (var i = 1; i <= 10; i++) expected.Items.Add(i.ToString());
+        expected.SelectedIndex = _result.UsbPortsExpected ?? 0;
+        expected.SelectionChanged += (_, _) =>
+        {
+            _result.UsbPortsExpected = expected.SelectedIndex > 0 ? expected.SelectedIndex : null;
+            RefreshUsbSummary();
+        };
+
+        var reset = new Button { Content = S("Làm lại", "Start over"), Padding = new Thickness(12, 4, 12, 4) };
+        reset.Click += (_, _) =>
+        {
+            _usbBaseline = null;
+            _usbPortNames.Clear();
+            _result.UsbPortsSeen.Clear();
+            _usbLog.Children.Clear();
+            RefreshUsbSummary();
+        };
+
+        var tools = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 10) };
+        tools.Children.Add(new TextBlock { Text = S("Số cổng USB trên vỏ máy:", "USB ports on the case:"), Foreground = BrText, VerticalAlignment = VerticalAlignment.Center });
+        tools.Children.Add(expected);
+        tools.Children.Add(_usbSummary);
+        tools.Children.Add(reset);
+
+        var panel = new DockPanel();
+        var top = new StackPanel();
+        top.Children.Add(Hint(S(
+            "Đếm số cổng USB (kể cả USB-C) trên vỏ máy rồi chọn ở ô bên dưới. Lấy một USB hoặc chuột USB, cắm lần lượt vào từng cổng: " +
+            "mỗi lần cắm, chờ khoảng 2 giây cho tới khi danh sách hiện thêm một dòng, rồi rút ra cắm sang cổng kế tiếp. " +
+            "Cổng nào cắm vào mà không hiện dòng mới là cổng chết hoặc lỏng chân.",
+            "Count the USB ports (including USB-C) on the case and pick the number below. Take a USB stick or USB mouse and plug it into each port in turn: " +
+            "each time, wait about 2 seconds until a new line appears, then unplug and move to the next port. " +
+            "A port that shows no new line is dead or has a loose connector.")));
+        top.Children.Add(tools);
+        DockPanel.SetDock(top, Dock.Top);
+        panel.Children.Add(top);
+
+        var verdict = VerdictRow(S("Cổng USB", "USB ports"), _result.UsbOk, v => _result.UsbOk = v);
+        DockPanel.SetDock(verdict, Dock.Bottom);
+        panel.Children.Add(verdict);
+        panel.Children.Add(new ScrollViewer { Content = _usbLog, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new Thickness(0, 0, 0, 8) });
+
+        _usbTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
+        _usbTimer.Tick += async (_, _) => await PollUsb();
+        _usbTimer.Start();
+        RefreshUsbSummary();
+        return Card(panel);
+    }
+
+    private async Task PollUsb()
+    {
+        // Chỉ dò khi đang mở đúng tab, để không truy vấn WMI liên tục ở các bài khác.
+        if (_usbBusy || !ReferenceEquals(_tabs.SelectedItem, _usbTab)) return;
+        _usbBusy = true;
+        try
+        {
+            var devices = await Task.Run(Collectors.Components.UsbProbe.List);
+            if (_usbBaseline is null)
+            {
+                // Lần đầu: ghi nhận những gì đang cắm sẵn (webcam, Bluetooth, chuột...) để không tính nhầm.
+                _usbBaseline = devices.Select(d => d.InstanceId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                return;
+            }
+
+            foreach (var d in devices.Where(d => !_usbBaseline.Contains(d.InstanceId)))
+            {
+                _usbBaseline.Add(d.InstanceId);
+                var location = d.Location ?? d.InstanceId;
+                if (!_usbPortNames.TryGetValue(location, out var portName))
+                {
+                    portName = S($"Cổng {_usbPortNames.Count + 1}", $"Port {_usbPortNames.Count + 1}");
+                    _usbPortNames[location] = portName;
+                    _result.UsbPortsSeen.Add(location);
+                }
+
+                _usbLog.Children.Insert(0, new TextBlock
+                {
+                    Text = $"{DateTime.Now:HH:mm:ss}  ✓ {portName} — {d.Name}{(d.Location is null ? string.Empty : $"  ({d.Location})")}",
+                    Foreground = Hex("#2FBF71"), Margin = new Thickness(0, 0, 0, 4)
+                });
+            }
+
+            // Thiết bị đã rút: bỏ khỏi danh sách để cắm lại cùng thiết bị vào cổng khác vẫn được nhận là lần cắm mới.
+            var present = devices.Select(d => d.InstanceId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            _usbBaseline.RemoveWhere(id => !present.Contains(id));
+            RefreshUsbSummary();
+        }
+        catch { }
+        finally { _usbBusy = false; }
+    }
+
+    private void RefreshUsbSummary()
+    {
+        var seen = _result.UsbPortsSeen.Count;
+        _usbSummary.Text = _result.UsbPortsExpected is { } total
+            ? S($"Đã nhận {seen}/{total} cổng", $"{seen}/{total} ports responded")
+            : S($"Đã nhận {seen} cổng", $"{seen} ports responded");
+        _usbSummary.Foreground = _result.UsbPortsExpected is { } t && seen >= t ? Hex("#2FBF71") : BrText;
+    }
+
+    // ==================================================================
+    // Pin: đo xả thật
+    // ==================================================================
+
+    private readonly List<Collectors.Components.BatterySample> _batterySamples = new();
+    private DispatcherTimer? _batteryTimer;
+    private TextBlock _batteryStatus = null!, _batteryLive = null!;
+    private Button _batteryButton = null!;
+    private ComboBox _batteryMinutes = null!;
+    private double? _fullChargeMwh;
+    private bool _batteryBusy;
+
+    private UIElement BuildBattery()
+    {
+        _batteryStatus = new TextBlock { Foreground = BrText, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 8), TextWrapping = TextWrapping.Wrap };
+        _batteryLive = new TextBlock { Foreground = BrText, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 12), FontSize = 14 };
+        _batteryMinutes = new ComboBox { Width = 120, Margin = new Thickness(0, 0, 12, 0), SelectedIndex = 1 };
+        foreach (var m in new[] { 5, 10, 15 }) _batteryMinutes.Items.Add(S($"{m} phút", $"{m} minutes"));
+        _batteryButton = new Button { Content = S("▶ Bắt đầu đo", "▶ Start measuring"), Padding = new Thickness(14, 6, 14, 6) };
+        _batteryButton.Click += (_, _) => ToggleBatteryTest();
+
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        row.Children.Add(_batteryMinutes);
+        row.Children.Add(_batteryButton);
+
+        var panel = new StackPanel();
+        panel.Children.Add(Hint(S(
+            "Độ chai pin chỉ cho biết pin còn chứa được bao nhiêu; bài này đo xem thực tế dùng được bao lâu. " +
+            "Rút sạc, để độ sáng màn hình khoảng 50%, dùng máy nhẹ nhàng (lướt web, gõ văn bản) trong suốt thời gian đo. " +
+            "Ứng dụng đọc dung lượng còn lại và công suất xả của pin mỗi 5 giây rồi quy ra số giờ dùng từ đầy tới cạn.",
+            "Battery wear only says how much the battery can hold; this test measures how long it actually lasts. " +
+            "Unplug the charger, set screen brightness to about 50% and use the machine lightly (browsing, typing) for the whole test. " +
+            "The app reads the remaining capacity and discharge power every 5 seconds and converts it into hours from full to empty.")));
+        panel.Children.Add(_batteryStatus);
+        panel.Children.Add(row);
+        panel.Children.Add(_batteryLive);
+
+        _ = Task.Run(() => (Collectors.Components.BatteryProbe.Read(), Collectors.Components.BatteryProbe.FullChargeMwh()))
+            .ContinueWith(t =>
+            {
+                if (!t.IsCompletedSuccessfully) return;
+                _fullChargeMwh = t.Result.Item2;
+                ShowBatteryState(t.Result.Item1);
+                if (_result.BatteryRuntimeHours is { } h) ShowBatteryResult(h);
+            }, TaskScheduler.FromCurrentSynchronizationContext());
+
+        return Card(panel);
+    }
+
+    private void ShowBatteryState(Collectors.Components.BatterySample s) =>
+        _batteryStatus.Text = s.OnAc
+            ? S("● Đang cắm sạc — rút sạc ra rồi bấm Bắt đầu đo.", "● On AC power — unplug the charger, then press Start.")
+            : S($"● Đang chạy bằng pin{(s.Percent is { } p ? $" — còn {p}%" : string.Empty)}.",
+                $"● Running on battery{(s.Percent is { } p2 ? $" — {p2}% left" : string.Empty)}.");
+
+    private void ToggleBatteryTest()
+    {
+        if (_batteryTimer is not null)
+        {
+            FinishBatteryTest();
+            return;
+        }
+
+        _batterySamples.Clear();
+        _batteryTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _batteryTimer.Tick += async (_, _) => await SampleBattery();
+        _batteryTimer.Start();
+        _batteryButton.Content = S("■ Dừng và tính kết quả", "■ Stop and compute");
+        _ = SampleBattery();
+    }
+
+    private async Task SampleBattery()
+    {
+        if (_batteryBusy) return;
+        _batteryBusy = true;
+        try
+        {
+            var sample = await Task.Run(Collectors.Components.BatteryProbe.Read);
+            ShowBatteryState(sample);
+            if (sample.OnAc)
+            {
+                _batteryLive.Text = S("Tạm dừng: máy đang cắm sạc. Rút sạc để đo tiếp.", "Paused: the machine is on AC power. Unplug to continue.");
+                return;
+            }
+
+            _batterySamples.Add(sample);
+            var minutes = (sample.Time - _batterySamples[0].Time).TotalMinutes;
+            var estimate = EstimateBattery();
+            _batteryLive.Text = S($"Đã đo {minutes:0.0} phút · công suất xả {(estimate.Watts is { } w ? $"{w:0.0} W" : "—")}" +
+                                  $"{(estimate.Hours is { } h ? $" · ước tính dùng được {h:0.0} giờ" : string.Empty)}",
+                                  $"Measured {minutes:0.0} min · drawing {(estimate.Watts is { } w2 ? $"{w2:0.0} W" : "—")}" +
+                                  $"{(estimate.Hours is { } h2 ? $" · estimated runtime {h2:0.0} h" : string.Empty)}");
+
+            var target = new[] { 5, 10, 15 }[Math.Max(0, _batteryMinutes.SelectedIndex)];
+            if (minutes >= target) FinishBatteryTest();
+        }
+        catch { }
+        finally { _batteryBusy = false; }
+    }
+
+    /// <summary>
+    /// Ưu tiên tính từ lượng mWh đã mất trong khoảng đo — phản ánh đúng mức dùng thực.
+    /// Pin chỉ báo phần trăm hoặc đo quá ngắn thì lấy trung bình công suất xả pin tự báo.
+    /// </summary>
+    private (double? Watts, double? Hours) EstimateBattery()
+    {
+        if (_batterySamples.Count < 2) return (null, null);
+        var first = _batterySamples[0];
+        var last = _batterySamples[^1];
+        var hours = (last.Time - first.Time).TotalHours;
+
+        double? watts = null;
+        if (first.RemainingMwh is { } a && last.RemainingMwh is { } b && a > b && hours * 60 >= 2)
+            watts = (a - b) / hours / 1000;
+        else
+        {
+            var rates = _batterySamples.Where(s => s.DischargeRateMw is > 0).Select(s => s.DischargeRateMw!.Value).ToList();
+            if (rates.Count > 0) watts = rates.Average() / 1000;
+        }
+
+        double? runtime = null;
+        if (watts is > 0.5 && _fullChargeMwh is { } full) runtime = full / 1000 / watts.Value;
+        else if (watts is null && first.Percent is { } p0 && last.Percent is { } p1 && p0 > p1 && hours > 0)
+            runtime = hours * 100 / (p0 - p1);
+
+        return (watts, runtime);
+    }
+
+    private void FinishBatteryTest()
+    {
+        _batteryTimer?.Stop();
+        _batteryTimer = null;
+        _batteryButton.Content = S("▶ Bắt đầu đo", "▶ Start measuring");
+
+        if (_batterySamples.Count < 2) return;
+        var (watts, hours) = EstimateBattery();
+        _result.BatteryTestMinutes = (_batterySamples[^1].Time - _batterySamples[0].Time).TotalMinutes;
+        _result.BatteryDrainWatts = watts;
+        _result.BatteryRuntimeHours = hours;
+        if (hours is { } h) ShowBatteryResult(h);
+    }
+
+    private void ShowBatteryResult(double hours)
+    {
+        var verdict = hours >= 3 ? S("tốt", "good") : hours >= 1.5 ? S("tạm được", "acceptable") : S("yếu — nên tính tiền thay pin", "weak — budget for a new battery");
+        _batteryLive.Text = S($"Kết quả: dùng được khoảng {hours:0.0} giờ ở mức tải lúc đo ({_result.BatteryDrainWatts:0.0} W) — {verdict}.",
+                              $"Result: about {hours:0.0} hours at the load during the test ({_result.BatteryDrainWatts:0.0} W) — {verdict}.");
+    }
+
+    // ==================================================================
     // Chung
     // ==================================================================
 
@@ -557,6 +827,8 @@ public sealed class DeviceTestWindow : Window
     private void Finish()
     {
         _timer.Stop();
+        if (_batteryTimer is not null) FinishBatteryTest();
+        _usbTimer?.Stop();
         _hook.Dispose();
         _mic.Dispose();
         ToneGenerator.Stop();

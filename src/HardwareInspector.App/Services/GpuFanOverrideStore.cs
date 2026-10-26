@@ -12,9 +12,7 @@ namespace HardwareInspector.App.Services;
 /// </summary>
 public sealed class GpuFanOverrideStore
 {
-    private readonly string _path = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "HardwareInspector", "gpu-fans.json");
+    private readonly string _path = AppPaths.DataFile("gpu-fans.json");
 
     private Dictionary<string, int>? _cache;
 
