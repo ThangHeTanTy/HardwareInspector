@@ -58,6 +58,7 @@ public sealed class HtmlReportExporter : IReportExporter
             """);
 
         AppendAdvice(sb, a.Advice);
+        AppendDeviceTests(sb, snapshot.DeviceTests);
 
         // Bảng tổng hợp linh kiện
         sb.Append(S("<section><h2>Tổng quan từng linh kiện</h2><table class=\"summary\"><thead><tr>" +
@@ -230,6 +231,40 @@ public sealed class HtmlReportExporter : IReportExporter
             sb.Append($"<p class=\"rec\">{E(advice.NegotiationTip)}</p>");
         sb.Append($"<p class=\"muted\">{E(S("Giá là mức tham khảo thị trường Việt Nam cho linh kiện phổ thông kèm công thay.", "Prices are Vietnamese market references for common parts including labour."))}</p>");
         sb.Append("</section>");
+    }
+
+    /// <summary>Kết quả thử bàn phím, touchpad, loa, micro, webcam làm trong ứng dụng.</summary>
+    private static void AppendDeviceTests(StringBuilder sb, Core.Models.Diagnostics.DeviceTestResult t)
+    {
+        if (!t.Any) return;
+
+        string Verdict(bool? ok) => ok switch
+        {
+            true => S("Đạt", "Pass"),
+            false => S("Không đạt", "Fail"),
+            _ => S("Chưa thử", "Not tested")
+        };
+
+        var rows = new List<(string Name, bool? Ok, string Detail)>
+        {
+            (S("Bàn phím", "Keyboard"), t.KeyboardOk, t.KeysTotal > 0
+                ? S($"Đã nhận {t.KeysPressed}/{t.KeysTotal} phím, bấm cùng lúc tối đa {t.MaxSimultaneousKeys} phím",
+                    $"{t.KeysPressed}/{t.KeysTotal} keys received, up to {t.MaxSimultaneousKeys} at once") +
+                  (t.ChatterKeys.Count > 0 ? S($"; phím dội: {string.Join(", ", t.ChatterKeys)}", $"; chatter: {string.Join(", ", t.ChatterKeys)}") : string.Empty) +
+                  (t.StuckKeys.Count > 0 ? S($"; nghi kẹt: {string.Join(", ", t.StuckKeys)}", $"; possibly stuck: {string.Join(", ", t.StuckKeys)}") : string.Empty)
+                : string.Empty),
+            (S("Touchpad / chuột", "Touchpad / mouse"), t.TouchpadOk,
+                S($"Phủ {t.TouchpadCoveragePercent:0}% khung", $"{t.TouchpadCoveragePercent:0}% of the area covered")),
+            (S("Loa trái", "Left speaker"), t.SpeakerLeftOk, string.Empty),
+            (S("Loa phải", "Right speaker"), t.SpeakerRightOk, string.Empty),
+            ("Micro", t.MicOk, t.MicPeakDb is { } db ? S($"To nhất đã thu {db:0} dB", $"Loudest captured {db:0} dB") : string.Empty),
+            ("Webcam", t.CameraOk, string.Join(", ", t.Cameras)),
+        };
+
+        sb.Append($"<section><h2>{E(S("Thử thiết bị trong ứng dụng", "In-app device tests"))}</h2><table class=\"summary\"><tbody>");
+        foreach (var (name, ok, detail) in rows)
+            sb.Append($"<tr><td><strong>{E(name)}</strong></td><td>{E(Verdict(ok))}</td><td class=\"note-cell\">{E(detail)}</td></tr>");
+        sb.Append("</tbody></table></section>");
     }
 
     private static string StatusColor(IntegrityStatus status) => status switch

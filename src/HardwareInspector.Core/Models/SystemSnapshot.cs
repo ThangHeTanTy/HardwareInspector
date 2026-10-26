@@ -35,6 +35,9 @@ public sealed class SystemSnapshot
     /// </summary>
     public Diagnostics.GpuTestResult? GpuTest { get; set; }
 
+    /// <summary>Kết quả thử bàn phím, touchpad, loa, micro, webcam người dùng đã làm trong ứng dụng.</summary>
+    public Diagnostics.DeviceTestResult DeviceTests { get; set; } = new();
+
     /// <summary>Kết quả đo cảm biến min/max/avg của phiên chạy.</summary>
     public List<SensorStats> SensorSnapshot { get; } = new();
 

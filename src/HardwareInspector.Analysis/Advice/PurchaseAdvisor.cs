@@ -157,6 +157,50 @@ public sealed class PurchaseAdvisor
                 S("Có quạt không quay khi máy chạy tải.", "A fan does not spin under load."),
                 laptop ? 250_000 : 100_000, laptop ? 600_000 : 350_000));
 
+        // --- Thiết bị vào ra người dùng đã thử trong ứng dụng ---
+        var t = s.DeviceTests;
+        if (t.KeyboardOk == false)
+        {
+            var bad = t.ChatterKeys.Concat(t.StuckKeys).Distinct().ToList();
+            var detail = bad.Count > 0
+                ? S($"Phím lỗi: {string.Join(", ", bad.Take(10))}.", $"Faulty keys: {string.Join(", ", bad.Take(10))}.")
+                : t.UntestedKeys.Count > 0
+                    ? S($"Phím không nhận: {string.Join(", ", t.UntestedKeys.Take(10))}.", $"Keys not registering: {string.Join(", ", t.UntestedKeys.Take(10))}.")
+                    : string.Empty;
+            costs.Add(new CostItem(CostKind.Repair, ComponentKind.Motherboard,
+                laptop ? S("Thay bàn phím laptop", "Replace the laptop keyboard") : S("Thay bàn phím", "Replace the keyboard"),
+                (S("Bài thử bàn phím không đạt. ", "The keyboard test failed. ") + detail).Trim(),
+                laptop ? 300_000 : 150_000, laptop ? 900_000 : 500_000));
+        }
+
+        if (t.TouchpadOk == false && laptop)
+            costs.Add(new CostItem(CostKind.Repair, ComponentKind.Motherboard,
+                S("Sửa hoặc thay touchpad", "Repair or replace the touchpad"),
+                S($"Bài thử touchpad không đạt (phủ được {t.TouchpadCoveragePercent:0}% khung).",
+                  $"The touchpad test failed ({t.TouchpadCoveragePercent:0}% of the area covered)."),
+                300_000, 1_000_000));
+
+        if (laptop && (t.SpeakerLeftOk == false || t.SpeakerRightOk == false))
+            costs.Add(new CostItem(CostKind.Repair, ComponentKind.Motherboard,
+                S("Thay loa laptop", "Replace the laptop speakers"),
+                S($"Loa {(t.SpeakerLeftOk == false && t.SpeakerRightOk == false ? "cả hai bên" : t.SpeakerLeftOk == false ? "trái" : "phải")} không đạt.",
+                  $"{(t.SpeakerLeftOk == false && t.SpeakerRightOk == false ? "Both speakers" : t.SpeakerLeftOk == false ? "Left speaker" : "Right speaker")} failed."),
+                200_000, 600_000));
+
+        if (laptop && t.MicOk == false)
+            costs.Add(new CostItem(CostKind.Repair, ComponentKind.Motherboard,
+                S("Sửa micro", "Repair the microphone"),
+                S("Micro không thu được tiếng. Nếu không cần gọi video, có thể dùng tai nghe có micro thay thế.",
+                  "The microphone picks up nothing. If you do not need video calls, a headset with a mic is a workaround."),
+                150_000, 450_000));
+
+        if (laptop && t.CameraOk == false)
+            costs.Add(new CostItem(CostKind.Repair, ComponentKind.Motherboard,
+                S("Thay webcam", "Replace the webcam"),
+                S("Webcam không đạt. Webcam rời USB là phương án rẻ nếu không cần camera trên máy.",
+                  "The webcam failed. An external USB webcam is a cheap alternative."),
+                250_000, 700_000));
+
         // --- Nâng cấp đáng cân nhắc (không bắt buộc) ---
         var ddr = s.Memory.Modules.Select(m => m.MemoryType).FirstOrDefault(t => t.StartsWith("DDR", StringComparison.OrdinalIgnoreCase));
         var canUpgradeRam = !s.Upgrade.MemoryIsSoldered;

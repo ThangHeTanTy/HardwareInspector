@@ -63,6 +63,8 @@
             </ComboBox.ItemTemplate>
           </ComboBox>
           <Button Content="{Binding [Btn.ScreenTest], Source={StaticResource Ui}}" Command="{Binding ScreenTestCommand}" Margin="0" />
+          <Button Content="{Binding [Btn.DeviceTest], Source={StaticResource Ui}}" Command="{Binding DeviceTestCommand}" Margin="6,0,0,0"
+                  ToolTip="{Binding [Btn.DeviceTest.Tip], Source={StaticResource Ui}}" />
         </StackPanel>
 
         <Button Content="{Binding [Btn.ExportHtml], Source={StaticResource Ui}}" Command="{Binding ExportHtmlCommand}" Margin="0,0,8,4" />

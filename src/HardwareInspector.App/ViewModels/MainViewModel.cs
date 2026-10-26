@@ -35,6 +35,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private readonly BenchmarkRunner _benchmarkRunner = new();
     private readonly GpuFanOverrideStore _fanOverrides = new();
     private readonly DisplayPortOverrideStore _portOverrides = new();
+
+    /// <summary>Kết quả thử bàn phím và thiết bị, giữ qua các lượt quét lại trong cùng phiên.</summary>
+    private readonly Core.Models.Diagnostics.DeviceTestResult _deviceTests = new();
     private AssemblySpec? _overviewModel;
     private CancellationTokenSource? _cts;
 
@@ -53,6 +56,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         ScanCommand = new RelayCommand(ScanAsync, () => !IsBusy);
         StressCommand = new RelayCommand(RunStressAsync, () => !IsBusy);
         ScreenTestCommand = new RelayCommand(OpenScreenTest, () => !IsBusy);
+        DeviceTestCommand = new RelayCommand(OpenDeviceTest);
         ExportHtmlCommand = new RelayCommand(() => ExportAsync(new HtmlReportExporter()), () => HasResult && !IsBusy);
         ExportJsonCommand = new RelayCommand(() => ExportAsync(new JsonReportExporter()), () => HasResult && !IsBusy);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
@@ -62,6 +66,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _pipeline.BeforeAnalysis = snapshot =>
         {
             foreach (var d in snapshot.Displays) d.OverrideConnection(_portOverrides.Get(d));
+            snapshot.DeviceTests = _deviceTests;
         };
         _ = _pipeline.StartSensorsAsync();
     }
@@ -132,6 +137,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public RelayCommand ScanCommand { get; }
     public RelayCommand StressCommand { get; }
     public RelayCommand ScreenTestCommand { get; }
+    public RelayCommand DeviceTestCommand { get; }
     public RelayCommand ExportHtmlCommand { get; }
     public RelayCommand ExportJsonCommand { get; }
     public RelayCommand CancelCommand { get; }
@@ -552,6 +558,23 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             _cts?.Dispose();
             _cts = null;
         }
+    }
+
+    /// <summary>
+    /// Mở bài thử bàn phím, touchpad, loa, micro, webcam. Đóng cửa sổ thì kết quả Đạt / Không đạt
+    /// được đưa vào kết luận và chi phí khắc phục ngay, không phải quét lại máy.
+    /// </summary>
+    private void OpenDeviceTest()
+    {
+        var window = new Views.DeviceTest.DeviceTestWindow(_deviceTests, _snapshot?.IsLaptop ?? true);
+        window.Closed += (_, _) =>
+        {
+            if (_snapshot is null) return;
+            _snapshot.DeviceTests = _deviceTests;
+            RebuildLocalizedContent();
+        };
+        window.Show();
+        window.Activate();
     }
 
     private void OpenScreenTest()
