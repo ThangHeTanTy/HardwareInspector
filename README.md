@@ -30,6 +30,36 @@ khe PCIe, ổ M.2 trong khe M.2, ổ SATA nối cáp về bo, màn hình nối c
 cột mốc trên mỗi linh kiện tô màu theo mức đánh giá của nó. Cạnh đó là thông tin nhanh của máy:
 model bo mạch, CPU, RAM, từng ổ, card đồ hoạ, kích thước và tần số quét từng màn.
 
+**Kết luận cho người mua** bằng lời thường: *Nên mua*, *Mua được nhưng cần thương lượng* hoặc
+*Không nên mua*, kèm lý do, việc người bán phải làm trước khi trả tiền, chi phí khắc phục ước tính
+bằng VNĐ (thay ổ, thay pin, thay keo tản nhiệt, thay bàn phím…) và gợi ý mức trả giá — xem tab
+*Mua hay không*.
+
+**Chống gian lận cấu hình:** ngoài đối chiếu chữ ký CPUID với tên CPU, bài kiểm tra GPU đo sức tính
+FP32 và băng thông VRAM rồi so với thông số chính hãng của model card khai. Card đời thấp nạp vBIOS
+đổi tên hụt rất xa ở cả hai con số.
+
+**Khoá doanh nghiệp:** phát hiện laptop còn đăng ký Windows Autopilot hoặc MDM của một tổ chức (cài lại
+Windows là bị khoá), tài khoản Entra ID, domain, Intel AMT, chống trộm Absolute/Computrace, BitLocker
+và mật khẩu BIOS.
+
+**Thử bàn phím & thiết bị:** vẽ bàn phím laptop, phím nào bấm thì sáng lên, bắt phím dội, phím kẹt và
+bấm nhiều phím cùng lúc; thử touchpad phủ kín vùng, click và cuộn; loa trái/phải riêng từng bên và
+bài quét âm nghe rè; đo mức thu micro; mở webcam. Kết quả Đạt / Không đạt được tính vào chi phí khắc phục.
+
+**Kiểm tra từng bước:** nút *Kiểm tra từng bước* dẫn người mới đi qua đủ trình tự — quét máy, chạy tải,
+bàn phím, touchpad, loa/micro/webcam, màn hình, cổng USB, Wi-Fi/Bluetooth, pin — bước nào xong được đánh dấu,
+cuối cùng mở thẳng kết luận.
+
+**Đo pin thật:** rút sạc 5–15 phút, ứng dụng đọc dung lượng và công suất xả của pin rồi quy ra số giờ dùng
+thực tế. **Cổng USB:** cắm một USB lần lượt vào từng cổng, ứng dụng ghi nhận cổng nào hoạt động.
+
+**So sánh nhiều máy:** nhập giá người bán (gõ "12,5tr", "12.500.000" hay "800k" đều được) rồi lưu; tab
+*So sánh máy* tính tổng tiền thật phải bỏ ra (giá + chi phí sửa) và chỉ ra máy đáng tiền nhất.
+
+**Chạy từ USB:** `tools\publish-portable.cmd` đóng gói bản tự chứa, không cần cài .NET. Chạy từ ổ USB (hoặc
+có file `portable.txt` cạnh .exe) thì cài đặt, danh sách so sánh và biên bản đều ghi cạnh .exe.
+
 Màn hình nối qua bộ chuyển đổi (ví dụ màn VGA cắm qua chip DisplayPort→VGA) có thể bị nhận sai cổng;
 khi đó chọn tay "Cổng thật của màn hình" trong phần Màn hình, lựa chọn được ghi nhớ cho lần sau.
 

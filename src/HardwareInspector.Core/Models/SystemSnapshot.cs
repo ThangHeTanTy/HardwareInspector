@@ -23,6 +23,9 @@ public sealed class SystemSnapshot
     public OperatingSystemInfo OperatingSystem { get; set; } = new();
     public FirmwareIntegrityReport Firmware { get; set; } = new();
 
+    /// <summary>Dấu hiệu máy thuộc tổ chức khác hoặc bị khoá: Autopilot, MDM, domain, BitLocker, mật khẩu BIOS.</summary>
+    public OwnershipInfo Ownership { get; set; } = new();
+
     /// <summary>Khả năng nâng cấp RAM và ổ cứng, đọc từ bảng SMBIOS.</summary>
     public UpgradeCapability Upgrade { get; set; } = new();
 
@@ -31,6 +34,9 @@ public sealed class SystemSnapshot
     /// Null nghĩa là chưa chạy — số liệu nhiệt GPU khi đó chỉ phản ánh lúc nghỉ.
     /// </summary>
     public Diagnostics.GpuTestResult? GpuTest { get; set; }
+
+    /// <summary>Kết quả thử bàn phím, touchpad, loa, micro, webcam người dùng đã làm trong ứng dụng.</summary>
+    public Diagnostics.DeviceTestResult DeviceTests { get; set; } = new();
 
     /// <summary>Kết quả đo cảm biến min/max/avg của phiên chạy.</summary>
     public List<SensorStats> SensorSnapshot { get; } = new();

@@ -96,6 +96,10 @@ public sealed record ComponentModelSpec(ComponentKind Kind)
     // --- Firmware ---
     public Highlight FirmwareChip { get; init; }
 
+    // --- Khoá & quyền sở hữu ---
+    /// <summary>Fault: máy bị tổ chức khác quản lý (khoá đóng, đỏ). Warn: còn dấu vết doanh nghiệp. None: khoá mở.</summary>
+    public Highlight OwnershipLock { get; init; }
+
     /// <summary>
     /// Có bộ phận nào bị tô sáng nằm bên trong vỏ không. Khi có, mô hình được vẽ ở dạng
     /// tách lớp (nhấc vỏ tản nhiệt hoặc nắp ổ lên) để thấy được chỗ hỏng.

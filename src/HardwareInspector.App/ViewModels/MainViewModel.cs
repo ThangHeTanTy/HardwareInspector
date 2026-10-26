@@ -25,6 +25,14 @@ public sealed record MetricRowView(MetricLine Metric, ComponentModelSpec? Spec, 
 /// <summary>Một ô thông tin nhanh ở phần kết luận: tên linh kiện và vài thông số chính.</summary>
 public sealed record QuickFact(string Label, string Value);
 
+/// <summary>Một máy trong tab "So sánh máy", chữ đã định dạng theo ngôn ngữ đang chọn.</summary>
+public sealed record ComparisonRow(
+    string Nickname, string Title, string Specs, string Score, string Decision, string DecisionColor,
+    string Repairs, string Price, string Total, bool IsBest, string Note, RelayCommand Remove);
+
+/// <summary>Một dòng chi phí ở tab "Mua hay không", số tiền đã định dạng sẵn.</summary>
+public sealed record CostRow(string Title, string Reason, string Range);
+
 public sealed class MainViewModel : ObservableObject, IDisposable
 {
     private readonly InspectionPipeline _pipeline = new();
@@ -32,6 +40,13 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private readonly BenchmarkRunner _benchmarkRunner = new();
     private readonly GpuFanOverrideStore _fanOverrides = new();
     private readonly DisplayPortOverrideStore _portOverrides = new();
+    private readonly MachineComparisonStore _comparison = new();
+    private string _compareNickname = string.Empty;
+    private string _comparePrice = string.Empty;
+    private string _comparisonVerdict = string.Empty;
+
+    /// <summary>Kết quả thử bàn phím và thiết bị, giữ qua các lượt quét lại trong cùng phiên.</summary>
+    private readonly Core.Models.Diagnostics.DeviceTestResult _deviceTests = new();
     private AssemblySpec? _overviewModel;
     private CancellationTokenSource? _cts;
 
@@ -50,6 +65,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         ScanCommand = new RelayCommand(ScanAsync, () => !IsBusy);
         StressCommand = new RelayCommand(RunStressAsync, () => !IsBusy);
         ScreenTestCommand = new RelayCommand(OpenScreenTest, () => !IsBusy);
+        DeviceTestCommand = new RelayCommand(() => OpenDeviceTest());
+        GuidedCommand = new RelayCommand(OpenGuided);
+        SaveComparisonCommand = new RelayCommand(SaveToComparison, () => HasResult);
+        RefreshComparison();
         ExportHtmlCommand = new RelayCommand(() => ExportAsync(new HtmlReportExporter()), () => HasResult && !IsBusy);
         ExportJsonCommand = new RelayCommand(() => ExportAsync(new JsonReportExporter()), () => HasResult && !IsBusy);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
@@ -59,6 +78,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _pipeline.BeforeAnalysis = snapshot =>
         {
             foreach (var d in snapshot.Displays) d.OverrideConnection(_portOverrides.Get(d));
+            snapshot.DeviceTests = _deviceTests;
         };
         _ = _pipeline.StartSensorsAsync();
     }
@@ -89,6 +109,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             BenchmarkResults.Clear();
             foreach (var r in results) BenchmarkResults.Add(r);
             if (_snapshot is { } snapshot) RefreshPortChoices(snapshot);
+            RefreshComparison();
         }
     }
 
@@ -129,6 +150,97 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public RelayCommand ScanCommand { get; }
     public RelayCommand StressCommand { get; }
     public RelayCommand ScreenTestCommand { get; }
+    public RelayCommand DeviceTestCommand { get; }
+    public RelayCommand GuidedCommand { get; }
+    public RelayCommand SaveComparisonCommand { get; }
+
+    // --- So sánh nhiều máy ---
+
+    public ObservableCollection<ComparisonRow> ComparisonRows { get; } = new();
+
+    public string ComparisonVerdict
+    {
+        get => _comparisonVerdict;
+        private set => Set(ref _comparisonVerdict, value);
+    }
+
+    /// <summary>Tên gợi nhớ cho máy đang xem; để trống thì dùng tên model.</summary>
+    public string CompareNickname
+    {
+        get => _compareNickname;
+        set => Set(ref _compareNickname, value);
+    }
+
+    /// <summary>Giá người bán gõ tự do: "12,5tr", "12.500.000", "800k"...</summary>
+    public string ComparePrice
+    {
+        get => _comparePrice;
+        set => Set(ref _comparePrice, value);
+    }
+
+    private void SaveToComparison()
+    {
+        if (_snapshot is null || _assessment is null) return;
+        var price = Analysis.Comparison.MachineComparison.ParsePrice(ComparePrice);
+        var record = Analysis.Comparison.MachineComparison.CreateRecord(_snapshot, _assessment, CompareNickname, price);
+        _comparison.Add(record);
+        Status = string.Format(Ui["Compare.Saved"], record.Nickname);
+        RefreshComparison();
+    }
+
+    private void RefreshComparison()
+    {
+        var ranked = Analysis.Comparison.MachineComparison.Rank(_comparison.All);
+        ComparisonRows.Clear();
+        foreach (var e in ranked)
+        {
+            var r = e.Record;
+            var id = r.Id;
+            ComparisonRows.Add(new ComparisonRow(
+                r.Nickname,
+                $"{r.MachineTitle} · {r.SavedAt:dd/MM HH:mm}",
+                Analysis.Comparison.MachineComparison.Specs(r),
+                $"{r.OverallScore}/100",
+                Analysis.Comparison.MachineComparison.DecisionText(r.Decision),
+                r.Decision switch
+                {
+                    PurchaseDecision.Buy => "#2FBF71",
+                    PurchaseDecision.Negotiate => "#F4A259",
+                    PurchaseDecision.Avoid => "#E5544B",
+                    _ => "#8A8F98"
+                },
+                r.RepairMaxVnd > 0 ? FormatHelpers.VndRange(r.RepairMinVnd, r.RepairMaxVnd) : "0 ₫",
+                r.AskedPriceVnd is { } p ? p.ToVnd() : "—",
+                r.EffectiveCostVnd is { } t ? t.ToVnd() : "—",
+                e.IsBest,
+                e.Note,
+                new RelayCommand(() => { _comparison.Remove(id); RefreshComparison(); })));
+        }
+        ComparisonVerdict = Analysis.Comparison.MachineComparison.Verdict(ranked);
+    }
+
+    /// <summary>Kết quả thử thiết bị dùng chung giữa cửa sổ thử thiết bị và chế độ từng bước.</summary>
+    public Core.Models.Diagnostics.DeviceTestResult DeviceTests => _deviceTests;
+
+    /// <summary>Đã chạy xong bài tải nặng trong phiên này.</summary>
+    public bool StressDone => BenchmarkResults.Count > 0;
+
+    /// <summary>Máy có pin không — biết trước khi quét bằng một truy vấn nhẹ, để chế độ từng bước hiện bước Pin.</summary>
+    public bool IsLaptop => _snapshot?.IsLaptop ?? _hasBattery.Value;
+    private readonly Lazy<bool> _hasBattery = new(() =>
+        Collectors.Wmi.WmiQuery.Query("SELECT Name FROM Win32_Battery").Any());
+
+    private int _selectedMainTab;
+
+    /// <summary>Tab đang mở ở vùng nội dung chính; chế độ từng bước dùng để nhảy tới tab "Mua hay không".</summary>
+    public int SelectedMainTab
+    {
+        get => _selectedMainTab;
+        set => Set(ref _selectedMainTab, value);
+    }
+
+    /// <summary>Vị trí tab "Mua hay không" trong vùng nội dung chính.</summary>
+    public const int AdviceTabIndex = 1;
     public RelayCommand ExportHtmlCommand { get; }
     public RelayCommand ExportJsonCommand { get; }
     public RelayCommand CancelCommand { get; }
@@ -143,6 +255,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             RefreshOverviewModel();
             OnPropertyChanged(nameof(HasResult));
             OnPropertyChanged(nameof(VerdictRowHeight));
+            SaveComparisonCommand.RaiseCanExecuteChanged();
             OnPropertyChanged(nameof(OverallScoreText));
             OnPropertyChanged(nameof(OverallRatingText));
             OnPropertyChanged(nameof(OverallColor));
@@ -153,6 +266,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(MachineTitle));
             OnPropertyChanged(nameof(SummaryText));
             OnPropertyChanged(nameof(QuickFacts));
+            OnPropertyChanged(nameof(Advice));
+            OnPropertyChanged(nameof(AdviceRepairs));
+            OnPropertyChanged(nameof(AdviceUpgrades));
+            OnPropertyChanged(nameof(AdviceRepairTotal));
+            OnPropertyChanged(nameof(AdviceCostLine));
             OnPropertyChanged(nameof(CrossChecks));
             OnPropertyChanged(nameof(ManualChecklist));
             OnPropertyChanged(nameof(FirmwareFindings));
@@ -312,10 +430,32 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public string MachineTitle => _assessment?.MachineTitle ?? Environment.MachineName;
     public string SummaryText => _assessment?.Summary ?? string.Empty;
 
+    /// <summary>Nhắc người dùng đang ở chế độ chạy từ USB: dữ liệu và biên bản ghi cạnh file .exe.</summary>
+    public string? PortableNote => AppPaths.IsPortable ? Ui["Status.Portable"] : null;
+
     /// <summary>Thẻ kết luận chiếm 40% chiều cao vùng dưới thanh lệnh; chưa có kết quả thì co về 0.</summary>
     public System.Windows.GridLength VerdictRowHeight => HasResult
         ? new System.Windows.GridLength(2, System.Windows.GridUnitType.Star)
         : new System.Windows.GridLength(0);
+
+    public PurchaseAdvice? Advice => _assessment?.Advice;
+
+    public IReadOnlyList<CostRow> AdviceRepairs => CostRows(CostKind.Repair);
+    public IReadOnlyList<CostRow> AdviceUpgrades => CostRows(CostKind.Upgrade);
+
+    private IReadOnlyList<CostRow> CostRows(CostKind kind) => _assessment?.Advice.Costs
+        .Where(c => c.Kind == kind)
+        .Select(c => new CostRow(c.Title, c.Reason, FormatHelpers.VndRange(c.MinVnd, c.MaxVnd)))
+        .ToList() ?? (IReadOnlyList<CostRow>)Array.Empty<CostRow>();
+
+    public string AdviceRepairTotal => _assessment?.Advice is { HasRepairs: true } a
+        ? Ui["Advice.Total"] + FormatHelpers.VndRange(a.RepairMinVnd, a.RepairMaxVnd)
+        : Ui["Advice.Total"] + "0 ₫";
+
+    /// <summary>Dòng ngắn dưới kết luận ở thẻ tổng: chi phí khắc phục nếu có.</summary>
+    public string? AdviceCostLine => _assessment?.Advice is { HasRepairs: true } a
+        ? Ui["Advice.Total"] + FormatHelpers.VndRange(a.RepairMinVnd, a.RepairMaxVnd)
+        : null;
 
     /// <summary>
     /// Thông tin nhanh của máy ở phần kết luận: model bo mạch, CPU, RAM, từng ổ, card đồ hoạ,
@@ -508,6 +648,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             SelectedComponent = Components.FirstOrDefault();
 
             Status = Ui["Status.StressDone"];
+            OnPropertyChanged(nameof(StressDone));
         }
         catch (OperationCanceledException)
         {
@@ -525,6 +666,57 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             _cts?.Dispose();
             _cts = null;
         }
+    }
+
+    /// <summary>
+    /// Mở bài thử bàn phím, touchpad, loa, micro, webcam. Đóng cửa sổ thì kết quả Đạt / Không đạt
+    /// được đưa vào kết luận và chi phí khắc phục ngay, không phải quét lại máy.
+    /// </summary>
+    private Views.DeviceTest.DeviceTestWindow? _deviceWindow;
+    private Views.Guided.GuidedWindow? _guidedWindow;
+
+    public void OpenDeviceTest(Views.DeviceTest.DeviceTestTab? tab = null)
+    {
+        if (_deviceWindow is null)
+        {
+            _deviceWindow = new Views.DeviceTest.DeviceTestWindow(_deviceTests, IsLaptop, OpenScreenTest);
+            _deviceWindow.Closed += (_, _) =>
+            {
+                _deviceWindow = null;
+                ApplyDeviceTests();
+            };
+            _deviceWindow.Show();
+        }
+
+        if (tab is { } t) _deviceWindow.SelectTab(t);
+        _deviceWindow.Activate();
+    }
+
+    /// <summary>Đưa kết quả thử thiết bị vào kết luận và chi phí ngay, không phải quét lại máy.</summary>
+    public void ApplyDeviceTests()
+    {
+        if (_snapshot is null) return;
+        _snapshot.DeviceTests = _deviceTests;
+        RebuildLocalizedContent();
+    }
+
+    /// <summary>Mở chế độ kiểm tra từng bước — dẫn người mới đi qua đủ mọi bài theo thứ tự.</summary>
+    private void OpenGuided()
+    {
+        if (_guidedWindow is null)
+        {
+            _guidedWindow = new Views.Guided.GuidedWindow(this);
+            _guidedWindow.Closed += (_, _) => _guidedWindow = null;
+            _guidedWindow.Show();
+        }
+        _guidedWindow.Activate();
+    }
+
+    public void ShowAdvice()
+    {
+        ApplyDeviceTests();
+        SelectedMainTab = AdviceTabIndex;
+        System.Windows.Application.Current.MainWindow?.Activate();
     }
 
     private void OpenScreenTest()
@@ -637,9 +829,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         try
         {
-            var folder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "HardwareInspector");
+            var folder = AppPaths.ReportsDirectory;
             var safeName = string.Join("_", MachineTitle.Split(Path.GetInvalidFileNameChars()));
             var file = Path.Combine(folder,
                 $"BienBanKiemTra_{safeName}_{DateTime.Now:yyyyMMdd_HHmm}{exporter.FileExtension}");

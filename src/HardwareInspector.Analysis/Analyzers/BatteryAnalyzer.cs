@@ -107,6 +107,26 @@ public sealed class BatteryAnalyzer : IComponentAnalyzer
                 S("Nhiều dòng pin không phơi bày trường này qua WMI", "Many batteries do not expose this field through WMI"), Severity.Notice);
         }
 
+        var drain = snapshot.DeviceTests;
+        if (drain.BatteryRuntimeHours is { } realHours)
+        {
+            card.Metric(S("Thời lượng thực đo", "Measured runtime"),
+                S($"{realHours:0.0} giờ", $"{realHours:0.0} h"),
+                S($"Đo xả {drain.BatteryTestMinutes:0} phút khi rút sạc, công suất {drain.BatteryDrainWatts:0.0} W",
+                  $"{drain.BatteryTestMinutes:0} min unplugged discharge test at {drain.BatteryDrainWatts:0.0} W"),
+                realHours < 1.5 ? Severity.Warning : Severity.Info);
+
+            if (realHours < 1.5)
+                card.Add("BAT-RUN-001", Kind, realHours < 0.75 ? Severity.Critical : Severity.Warning,
+                    S($"Pin thực tế chỉ dùng được khoảng {realHours:0.0} giờ", $"The battery really lasts only about {realHours:0.0} hours"),
+                    S("Đo khi dùng nhẹ mà chưa tới 1,5 giờ thì gần như phải cắm sạc cả ngày. " +
+                      "Con số này đáng tin hơn phần trăm độ chai vì đo trực tiếp lúc máy chạy.",
+                      "Under 1.5 hours of light use means staying plugged in most of the day. " +
+                      "This is more trustworthy than the wear percentage because it is measured while the machine runs."),
+                    S("Tính chi phí thay pin vào giá mua.", "Factor a replacement battery into the price."),
+                    penalty: realHours < 0.75 ? 30 : 15, confidence: 0.8, source: EvidenceSource.Benchmark);
+        }
+
         if (battery.EstimatedRuntimeMinutes is { } runtime)
             card.Metric(S("Thời lượng ước tính còn lại", "Estimated runtime left"), S($"{runtime} phút", $"{runtime} min"));
 

@@ -12,7 +12,10 @@ public enum ComponentKind
     Motherboard,
     Firmware,
     Cooling,
-    OperatingSystem
+    OperatingSystem,
+
+    /// <summary>Máy có bị tổ chức khác quản lý hoặc khoá không (Autopilot, MDM, domain, BIOS).</summary>
+    Ownership
 }
 
 /// <summary>Bốn mức đánh giá theo yêu cầu nghiệp vụ (+ Unknown khi thiếu dữ liệu).</summary>

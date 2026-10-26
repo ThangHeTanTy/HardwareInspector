@@ -319,6 +319,18 @@
     Template chỉ giữ lại PART_ContentHost; đặt thanh cuộn về Disabled để sự kiện lăn chuột
     truyền lên ScrollViewer bao ngoài thay vì bị TextBox nuốt mất.
   -->
+  <!-- Ô nhập liệu (tên máy, giá người bán). Các TextBox khác trong ứng dụng là chữ chỉ đọc. -->
+  <Style x:Key="InputBox" TargetType="TextBox">
+    <Setter Property="Background" Value="#101318" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    <Setter Property="CaretBrush" Value="{StaticResource TextBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="8,5" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
   <Style x:Key="SelectableTextBase" TargetType="TextBox">
     <Setter Property="IsReadOnly" Value="True" />
     <Setter Property="IsReadOnlyCaretVisible" Value="False" />

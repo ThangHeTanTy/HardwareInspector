@@ -57,6 +57,9 @@ public sealed class HtmlReportExporter : IReportExporter
             </section>
             """);
 
+        AppendAdvice(sb, a.Advice);
+        AppendDeviceTests(sb, snapshot.DeviceTests);
+
         // Bảng tổng hợp linh kiện
         sb.Append(S("<section><h2>Tổng quan từng linh kiện</h2><table class=\"summary\"><thead><tr>" +
                     "<th>Linh kiện</th><th>Tên</th><th>Đánh giá</th><th>Điểm</th><th>Thời gian hoạt động</th><th>Sức khoẻ</th>" +
@@ -185,6 +188,92 @@ public sealed class HtmlReportExporter : IReportExporter
 
         sb.Append(HtmlTemplate.Foot());
         return sb.ToString();
+    }
+
+    /// <summary>Kết luận cho người mua: nên mua hay không, việc người bán phải làm, chi phí quy ra tiền.</summary>
+    private static void AppendAdvice(StringBuilder sb, PurchaseAdvice advice)
+    {
+        if (advice.Decision == PurchaseDecision.Unknown) return;
+
+        sb.Append($"<section class=\"advice\"><h2 style=\"color:{advice.ColorHex}\">{E(advice.Headline)}</h2>" +
+                  $"<p>{E(advice.Explanation)}</p>");
+
+        void List(string title, IEnumerable<string> items, string cls)
+        {
+            var list = items.ToList();
+            if (list.Count == 0) return;
+            sb.Append($"<h3>{E(title)}</h3><ul class=\"findings\">");
+            foreach (var item in list) sb.Append($"<li class=\"{cls}\">{E(item)}</li>");
+            sb.Append("</ul>");
+        }
+
+        List(S("Vì sao không nên mua", "Why not to buy"), advice.Blockers, "sev-critical");
+        List(S("Người bán phải làm xong trước khi bạn trả tiền", "The seller must do these before you pay"), advice.Conditions, "sev-warning");
+
+        void Costs(string title, CostKind kind)
+        {
+            var rows = advice.Costs.Where(c => c.Kind == kind).ToList();
+            if (rows.Count == 0) return;
+            sb.Append($"<h3>{E(title)}</h3><table class=\"summary\"><tbody>");
+            foreach (var c in rows)
+                sb.Append($"<tr><td><strong>{E(c.Title)}</strong><br><span class=\"muted\">{E(c.Reason)}</span></td>" +
+                          $"<td class=\"num-cell\">{E(FormatHelpers.VndRange(c.MinVnd, c.MaxVnd))}</td></tr>");
+            sb.Append("</tbody></table>");
+        }
+
+        Costs(S("Chi phí khắc phục ước tính", "Estimated repair costs"), CostKind.Repair);
+        if (advice.HasRepairs)
+            sb.Append($"<p><strong>{E(S("Tổng chi phí khắc phục: ", "Total repair cost: "))}" +
+                      $"{E(FormatHelpers.VndRange(advice.RepairMinVnd, advice.RepairMaxVnd))}</strong></p>");
+        Costs(S("Nâng cấp nên cân nhắc (không bắt buộc)", "Upgrades worth considering (optional)"), CostKind.Upgrade);
+
+        if (!string.IsNullOrWhiteSpace(advice.NegotiationTip))
+            sb.Append($"<p class=\"rec\">{E(advice.NegotiationTip)}</p>");
+        sb.Append($"<p class=\"muted\">{E(S("Giá là mức tham khảo thị trường Việt Nam cho linh kiện phổ thông kèm công thay.", "Prices are Vietnamese market references for common parts including labour."))}</p>");
+        sb.Append("</section>");
+    }
+
+    /// <summary>Kết quả thử bàn phím, touchpad, loa, micro, webcam làm trong ứng dụng.</summary>
+    private static void AppendDeviceTests(StringBuilder sb, Core.Models.Diagnostics.DeviceTestResult t)
+    {
+        if (!t.Any) return;
+
+        string Verdict(bool? ok) => ok switch
+        {
+            true => S("Đạt", "Pass"),
+            false => S("Không đạt", "Fail"),
+            _ => S("Chưa thử", "Not tested")
+        };
+
+        var rows = new List<(string Name, bool? Ok, string Detail)>
+        {
+            (S("Bàn phím", "Keyboard"), t.KeyboardOk, t.KeysTotal > 0
+                ? S($"Đã nhận {t.KeysPressed}/{t.KeysTotal} phím, bấm cùng lúc tối đa {t.MaxSimultaneousKeys} phím",
+                    $"{t.KeysPressed}/{t.KeysTotal} keys received, up to {t.MaxSimultaneousKeys} at once") +
+                  (t.ChatterKeys.Count > 0 ? S($"; phím dội: {string.Join(", ", t.ChatterKeys)}", $"; chatter: {string.Join(", ", t.ChatterKeys)}") : string.Empty) +
+                  (t.StuckKeys.Count > 0 ? S($"; nghi kẹt: {string.Join(", ", t.StuckKeys)}", $"; possibly stuck: {string.Join(", ", t.StuckKeys)}") : string.Empty)
+                : string.Empty),
+            (S("Touchpad / chuột", "Touchpad / mouse"), t.TouchpadOk,
+                S($"Phủ {t.TouchpadCoveragePercent:0}% khung", $"{t.TouchpadCoveragePercent:0}% of the area covered")),
+            (S("Loa trái", "Left speaker"), t.SpeakerLeftOk, string.Empty),
+            (S("Loa phải", "Right speaker"), t.SpeakerRightOk, string.Empty),
+            ("Micro", t.MicOk, t.MicPeakDb is { } db ? S($"To nhất đã thu {db:0} dB", $"Loudest captured {db:0} dB") : string.Empty),
+            ("Webcam", t.CameraOk, string.Join(", ", t.Cameras)),
+            (S("Màn hình", "Screen"), t.ScreenOk, string.Empty),
+            ("Wi-Fi", t.WifiOk, t.WifiAdapter ?? string.Empty),
+            ("Bluetooth", t.BluetoothOk, string.Empty),
+            (S("Cổng USB", "USB ports"), t.UsbOk, S($"{t.UsbPortsSeen.Count}{(t.UsbPortsExpected is { } e ? $"/{e}" : string.Empty)} cổng nhận thiết bị",
+                                                     $"{t.UsbPortsSeen.Count}{(t.UsbPortsExpected is { } e2 ? $"/{e2}" : string.Empty)} ports responded")),
+        };
+        if (t.BatteryRuntimeHours is { } hours)
+            rows.Add((S("Pin (đo xả thật)", "Battery (real discharge)"), hours >= 1.5,
+                S($"Dùng được khoảng {hours:0.0} giờ ở {t.BatteryDrainWatts:0.0} W, đo {t.BatteryTestMinutes:0} phút",
+                  $"About {hours:0.0} h at {t.BatteryDrainWatts:0.0} W, measured over {t.BatteryTestMinutes:0} min")));
+
+        sb.Append($"<section><h2>{E(S("Thử thiết bị trong ứng dụng", "In-app device tests"))}</h2><table class=\"summary\"><tbody>");
+        foreach (var (name, ok, detail) in rows)
+            sb.Append($"<tr><td><strong>{E(name)}</strong></td><td>{E(Verdict(ok))}</td><td class=\"note-cell\">{E(detail)}</td></tr>");
+        sb.Append("</tbody></table></section>");
     }
 
     private static string StatusColor(IntegrityStatus status) => status switch

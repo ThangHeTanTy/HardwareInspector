@@ -72,6 +72,7 @@ public sealed class GpuStressBenchmark : IBenchmark
             result.AdapterName = tester.AdapterName;
             result.DedicatedVideoMemoryBytes = tester.DedicatedVideoMemory;
 
+            tester.RunSpecProbe(result, ct);
             tester.RunStress(result, _stressDuration, stressProgress, ct);
             tester.RunVramTest(result, _vramBudget, vramProgress, ct);
             result.Completed = true;
@@ -101,6 +102,9 @@ public sealed class GpuStressBenchmark : IBenchmark
 
         if (r.DeviceLost)
             parts.Add(S("DRIVER BỊ RESET GIỮA CHỪNG ({0})", "DRIVER RESET MID-TEST ({0})", r.DeviceLostReason));
+
+        if (r.PeakGflops is { } peak && r.MemoryBandwidthGBps is { } bw)
+            parts.Add(S("đỉnh {0:0.00} TFLOPS, VRAM {1:0} GB/s", "peak {0:0.00} TFLOPS, VRAM {1:0} GB/s", peak / 1000, bw));
 
         if (r.ComputeChecks > 0)
             parts.Add(S("{0:0.#} phút tải, {1} lần đối chiếu tính toán, {2} lần lệch",

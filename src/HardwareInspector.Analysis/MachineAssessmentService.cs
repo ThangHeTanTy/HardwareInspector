@@ -18,6 +18,7 @@ public sealed class MachineAssessmentService
     private readonly SecondHandTrustEngine _trustEngine;
     private readonly ComponentAuthenticityEngine _authenticityEngine = new();
     private readonly WarrantyLookupService _warrantyService = new();
+    private readonly Advice.PurchaseAdvisor _advisor = new();
 
     /// <summary>
     /// Trọng số phản ánh mức độ ảnh hưởng của từng linh kiện tới trải nghiệm
@@ -33,7 +34,8 @@ public sealed class MachineAssessmentService
         [ComponentKind.Memory] = 1.0,
         [ComponentKind.Battery] = 0.9,
         [ComponentKind.Display] = 0.9,
-        [ComponentKind.Motherboard] = 0.8
+        [ComponentKind.Motherboard] = 0.8,
+        [ComponentKind.Ownership] = 1.4
     };
 
     public MachineAssessmentService(IEnumerable<IComponentAnalyzer>? analyzers = null,
@@ -48,7 +50,8 @@ public sealed class MachineAssessmentService
             new StorageAnalyzer(),
             new BatteryAnalyzer(),
             new DisplayAnalyzer(),
-            new MotherboardAnalyzer()
+            new MotherboardAnalyzer(),
+            new OwnershipAnalyzer()
         };
         _trustEngine = trustEngine ?? new SecondHandTrustEngine();
     }
@@ -91,6 +94,8 @@ public sealed class MachineAssessmentService
         assessment.OverallRating = RatingScale.FromScore(assessment.OverallScore);
         assessment.Trust = _trustEngine.Evaluate(snapshot, assessment.Components);
         assessment.Summary = BuildSummary(assessment);
+        try { assessment.Advice = _advisor.Advise(snapshot, assessment); }
+        catch { }
 
         return assessment;
     }

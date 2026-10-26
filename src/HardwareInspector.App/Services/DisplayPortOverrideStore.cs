@@ -12,9 +12,7 @@ namespace HardwareInspector.App.Services;
 /// </summary>
 public sealed class DisplayPortOverrideStore
 {
-    private readonly string _path = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "HardwareInspector", "display-ports.json");
+    private readonly string _path = AppPaths.DataFile("display-ports.json");
 
     private Dictionary<string, DisplayConnection>? _cache;
 

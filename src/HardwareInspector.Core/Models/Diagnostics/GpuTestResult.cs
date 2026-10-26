@@ -38,6 +38,14 @@ public sealed class GpuTestResult
     public bool DeviceLost { get; set; }
     public string? DeviceLostReason { get; set; }
 
+    // --- Đối chiếu thông số (đo lúc card còn nguội) ---
+
+    /// <summary>Sức tính FP32 đo được, GFLOPS. Null khi chưa đo.</summary>
+    public double? PeakGflops { get; set; }
+
+    /// <summary>Băng thông VRAM đo được (đọc + ghi), GB/s. Null khi chưa đo.</summary>
+    public double? MemoryBandwidthGBps { get; set; }
+
     // --- VRAM ---
 
     public bool VramTestSkipped { get; set; }

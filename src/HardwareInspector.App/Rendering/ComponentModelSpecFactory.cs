@@ -29,6 +29,7 @@ public static class ComponentModelSpecFactory
         ComponentKind.Display => Display(snapshot, 0),
         ComponentKind.Motherboard => Board(snapshot),
         ComponentKind.Firmware => Firmware(snapshot),
+        ComponentKind.Ownership => Ownership(snapshot),
         _ => new ComponentModelSpec(assessment.Kind)
     };
 
@@ -85,6 +86,17 @@ public static class ComponentModelSpecFactory
             Displays = Enumerable.Range(0, Math.Min(snapshot.Displays.Count, 4))
                 .Select(i => Display(snapshot, i)).ToList(),
             Ratings = assessment.Components.GroupBy(c => c.Kind).ToDictionary(g => g.Key, g => g.First().Rating)
+        };
+    }
+
+    private static ComponentModelSpec Ownership(SystemSnapshot snapshot)
+    {
+        var o = snapshot.Ownership;
+        return new ComponentModelSpec(ComponentKind.Ownership)
+        {
+            OwnershipLock = o.AutopilotProfilePresent || o.MdmEnrollments.Count > 0 ? Highlight.Fault
+                : o.AzureAdJoined || o.IntelAmtActive || o.AbsoluteAgentFound || o.BiosPasswordSet == true ? Highlight.Warn
+                : Highlight.None
         };
     }
 
