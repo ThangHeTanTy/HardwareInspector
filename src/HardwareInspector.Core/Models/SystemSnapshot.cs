@@ -23,6 +23,9 @@ public sealed class SystemSnapshot
     public OperatingSystemInfo OperatingSystem { get; set; } = new();
     public FirmwareIntegrityReport Firmware { get; set; } = new();
 
+    /// <summary>Dấu hiệu máy thuộc tổ chức khác hoặc bị khoá: Autopilot, MDM, domain, BitLocker, mật khẩu BIOS.</summary>
+    public OwnershipInfo Ownership { get; set; } = new();
+
     /// <summary>Khả năng nâng cấp RAM và ổ cứng, đọc từ bảng SMBIOS.</summary>
     public UpgradeCapability Upgrade { get; set; } = new();
 

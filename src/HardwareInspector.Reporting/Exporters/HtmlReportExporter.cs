@@ -57,6 +57,8 @@ public sealed class HtmlReportExporter : IReportExporter
             </section>
             """);
 
+        AppendAdvice(sb, a.Advice);
+
         // Bảng tổng hợp linh kiện
         sb.Append(S("<section><h2>Tổng quan từng linh kiện</h2><table class=\"summary\"><thead><tr>" +
                     "<th>Linh kiện</th><th>Tên</th><th>Đánh giá</th><th>Điểm</th><th>Thời gian hoạt động</th><th>Sức khoẻ</th>" +
@@ -185,6 +187,49 @@ public sealed class HtmlReportExporter : IReportExporter
 
         sb.Append(HtmlTemplate.Foot());
         return sb.ToString();
+    }
+
+    /// <summary>Kết luận cho người mua: nên mua hay không, việc người bán phải làm, chi phí quy ra tiền.</summary>
+    private static void AppendAdvice(StringBuilder sb, PurchaseAdvice advice)
+    {
+        if (advice.Decision == PurchaseDecision.Unknown) return;
+
+        sb.Append($"<section class=\"advice\"><h2 style=\"color:{advice.ColorHex}\">{E(advice.Headline)}</h2>" +
+                  $"<p>{E(advice.Explanation)}</p>");
+
+        void List(string title, IEnumerable<string> items, string cls)
+        {
+            var list = items.ToList();
+            if (list.Count == 0) return;
+            sb.Append($"<h3>{E(title)}</h3><ul class=\"findings\">");
+            foreach (var item in list) sb.Append($"<li class=\"{cls}\">{E(item)}</li>");
+            sb.Append("</ul>");
+        }
+
+        List(S("Vì sao không nên mua", "Why not to buy"), advice.Blockers, "sev-critical");
+        List(S("Người bán phải làm xong trước khi bạn trả tiền", "The seller must do these before you pay"), advice.Conditions, "sev-warning");
+
+        void Costs(string title, CostKind kind)
+        {
+            var rows = advice.Costs.Where(c => c.Kind == kind).ToList();
+            if (rows.Count == 0) return;
+            sb.Append($"<h3>{E(title)}</h3><table class=\"summary\"><tbody>");
+            foreach (var c in rows)
+                sb.Append($"<tr><td><strong>{E(c.Title)}</strong><br><span class=\"muted\">{E(c.Reason)}</span></td>" +
+                          $"<td class=\"num-cell\">{E(FormatHelpers.VndRange(c.MinVnd, c.MaxVnd))}</td></tr>");
+            sb.Append("</tbody></table>");
+        }
+
+        Costs(S("Chi phí khắc phục ước tính", "Estimated repair costs"), CostKind.Repair);
+        if (advice.HasRepairs)
+            sb.Append($"<p><strong>{E(S("Tổng chi phí khắc phục: ", "Total repair cost: "))}" +
+                      $"{E(FormatHelpers.VndRange(advice.RepairMinVnd, advice.RepairMaxVnd))}</strong></p>");
+        Costs(S("Nâng cấp nên cân nhắc (không bắt buộc)", "Upgrades worth considering (optional)"), CostKind.Upgrade);
+
+        if (!string.IsNullOrWhiteSpace(advice.NegotiationTip))
+            sb.Append($"<p class=\"rec\">{E(advice.NegotiationTip)}</p>");
+        sb.Append($"<p class=\"muted\">{E(S("Giá là mức tham khảo thị trường Việt Nam cho linh kiện phổ thông kèm công thay.", "Prices are Vietnamese market references for common parts including labour."))}</p>");
+        sb.Append("</section>");
     }
 
     private static string StatusColor(IntegrityStatus status) => status switch

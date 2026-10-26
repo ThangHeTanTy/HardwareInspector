@@ -85,6 +85,7 @@ public static class ComponentModels
             case ComponentKind.Display: Display(b, spec); break;
             case ComponentKind.Motherboard: Board(b, spec); break;
             case ComponentKind.Firmware: BiosChip(b, spec); break;
+            case ComponentKind.Ownership: Padlock(b, spec); break;
             case ComponentKind.Cooling: Fan(b, new V3(0, 0.2, 0), 4.5, 9, Highlight.None); break;
             default: b.AddBox("plastic", new V3(0, 0.6, 0), new V3(1.2, 1.2, 1.2)); break;
         }
@@ -1118,6 +1119,43 @@ public static class ComponentModels
     // ------------------------------------------------------------------
     // Firmware — chip BIOS SPI 8 chân
     // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Ổ khoá cho mục "Khoá & quyền sở hữu": máy bị tổ chức khác quản lý thì khoá đóng và đỏ,
+    /// còn dấu vết doanh nghiệp thì đóng và cam, sạch thì càng khoá bật lên và xoay mở.
+    /// </summary>
+    private static void Padlock(ModelBuilder b, ComponentModelSpec s)
+    {
+        var body = M(s.OwnershipLock, "gold");
+        b.AddBox(body, new V3(0, 0.2, 0), new V3(2.0, 1.6, 0.8));
+        b.AddBox("metal_dark", new V3(0, 0.2, 0.41), new V3(1.7, 1.3, 0.02));
+        b.AddCylinder("plastic_dark", new V3(0, 0.4, 0.43), 0.16, 0.04, 24, Axis.Z);
+        b.AddBox("plastic_dark", new V3(0, 0.15, 0.43), new V3(0.12, 0.4, 0.04));
+
+        const double r = 0.72, leg = 0.55, thick = 0.24;
+        var open = s.OwnershipLock == Highlight.None;
+
+        // Càng khoá vẽ quanh chân trái làm gốc, để khi mở chỉ cần nhấc lên rồi xoay quanh chân đó.
+        const double lift = 0.45;
+        using (b.Place(new V3(-r, open ? 1.0 + lift : 1.0, 0), rotY: open ? -Math.PI / 2 : 0))
+        {
+            // Khi mở, chân trái vẫn cắm trong thân khoá nên kéo dài xuống bằng đúng đoạn nhấc lên.
+            var leftLength = open ? leg + lift + 0.2 : leg;
+            b.AddCylinder("metal", new V3(0, leg - leftLength / 2, 0), thick / 2, leftLength, 20);
+            b.AddCylinder("metal", new V3(2 * r, leg / 2, 0), thick / 2, leg, 20);
+
+            const int segments = 16;
+            for (var i = 0; i < segments; i++)
+            {
+                var a0 = Math.PI * i / segments;
+                var a1 = Math.PI * (i + 1) / segments;
+                var mid = (a0 + a1) / 2;
+                var length = 2 * r * Math.Sin((a1 - a0) / 2) + 0.02;
+                b.AddBox("metal", new V3(r + r * Math.Cos(mid), leg + r * Math.Sin(mid), 0),
+                    new V3(length, thick, thick), rotZ: mid + Math.PI / 2);
+            }
+        }
+    }
 
     private static void BiosChip(ModelBuilder b, ComponentModelSpec s)
     {

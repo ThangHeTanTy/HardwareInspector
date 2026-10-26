@@ -52,6 +52,7 @@ public sealed class InspectionPipeline : IDisposable
             new StorageCollector(),
             new BatteryCollector(),
             new DisplayCollector(),
+            new OwnershipCollector(),
             new UpgradeCapabilityCollector(),
             new ReliabilityScanner(),
             new FirmwareIntegrityService(),

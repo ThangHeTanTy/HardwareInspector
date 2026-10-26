@@ -70,6 +70,7 @@ public static class RatingScale
         ComponentKind.Firmware => S("BIOS & bảo mật", "BIOS & security"),
         ComponentKind.Cooling => S("Tản nhiệt", "Cooling"),
         ComponentKind.OperatingSystem => S("Hệ điều hành", "Operating system"),
+        ComponentKind.Ownership => S("Khoá & quyền sở hữu", "Ownership & locks"),
         _ => kind.ToString()
     };
 

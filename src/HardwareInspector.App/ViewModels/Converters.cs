@@ -53,7 +53,7 @@ public sealed class BoolToVisibilityConverter : IValueConverter
 public sealed class NullToVisibilityConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        value is null ? Visibility.Collapsed : Visibility.Visible;
+        value is null || value is string s && string.IsNullOrWhiteSpace(s) ? Visibility.Collapsed : Visibility.Visible;
 
     public object ConvertBack(object? value, Type t, object? p, CultureInfo c) =>
         throw new NotSupportedException();

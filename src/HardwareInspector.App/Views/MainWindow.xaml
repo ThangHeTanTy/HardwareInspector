@@ -154,7 +154,14 @@
         <!-- Tóm tắt: dài thì cuộn trong thẻ, không đẩy phần đánh giá bên dưới -->
         <ScrollViewer Grid.Column="1" Margin="16,0,0,0" VerticalScrollBarVisibility="Auto">
           <StackPanel>
-            <TextBlock Text="{Binding SummaryText}" TextWrapping="Wrap" Margin="0,0,0,8" />
+            <!-- Kết luận bằng lời thường: nên mua, thương lượng hay bỏ qua. Chi tiết ở tab "Mua hay không". -->
+            <TextBlock Text="{Binding Advice.Headline}" FontSize="17" FontWeight="Bold" TextWrapping="Wrap"
+                       Foreground="{Binding Advice.ColorHex, Converter={StaticResource HexToBrush}}" />
+            <TextBlock Text="{Binding Advice.Explanation}" TextWrapping="Wrap" Margin="0,2,0,2" />
+            <TextBlock Text="{Binding AdviceCostLine}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,8"
+                       Foreground="{Binding Advice.ColorHex, Converter={StaticResource HexToBrush}}"
+                       Visibility="{Binding AdviceCostLine, Converter={StaticResource NullToVisibility}}" />
+            <TextBlock Text="{Binding SummaryText}" TextWrapping="Wrap" Style="{StaticResource Dim}" Margin="0,0,0,6" />
             <TextBlock Text="{Binding TrustVerdict}" TextWrapping="Wrap" Style="{StaticResource Dim}" />
           </StackPanel>
         </ScrollViewer>
@@ -434,6 +441,120 @@
             </ScrollViewer>
           </Border>
         </Grid>
+      </TabItem>
+
+      <!-- Tab: Mua hay không — kết luận cho người không rành máy, quy ra tiền để trả giá -->
+      <TabItem Header="{Binding [Tab.Advice], Source={StaticResource Ui}}">
+        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+          <ScrollViewer>
+            <StackPanel>
+              <TextBlock Text="{Binding [Advice.Eyebrow], Source={StaticResource Ui}}" Style="{StaticResource Eyebrow}" />
+              <TextBlock Text="{Binding Advice.Headline}" FontSize="22" FontWeight="Bold" Margin="0,4,0,2"
+                         Foreground="{Binding Advice.ColorHex, Converter={StaticResource HexToBrush}}" />
+              <TextBlock Text="{Binding Advice.Explanation}" TextWrapping="Wrap" Margin="0,0,0,16" />
+
+              <StackPanel Margin="0,0,0,16">
+                <StackPanel.Style>
+                  <Style TargetType="StackPanel">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding Advice.Blockers.Count}" Value="0">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </StackPanel.Style>
+                <TextBlock Text="{Binding [Advice.Blockers], Source={StaticResource Ui}}" Style="{StaticResource H2}" Foreground="#E5544B" />
+                <ItemsControl ItemsSource="{Binding Advice.Blockers}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock TextWrapping="Wrap" Margin="0,0,0,6"><Run Text="✕  " Foreground="#E5544B" /><Run Text="{Binding Mode=OneWay}" /></TextBlock>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+
+              <StackPanel Margin="0,0,0,16">
+                <StackPanel.Style>
+                  <Style TargetType="StackPanel">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding Advice.Conditions.Count}" Value="0">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </StackPanel.Style>
+                <TextBlock Text="{Binding [Advice.Conditions], Source={StaticResource Ui}}" Style="{StaticResource H2}" Foreground="#F4A259" />
+                <ItemsControl ItemsSource="{Binding Advice.Conditions}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock TextWrapping="Wrap" Margin="0,0,0,6"><Run Text="☐  " Foreground="#F4A259" /><Run Text="{Binding Mode=OneWay}" /></TextBlock>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+
+              <TextBlock Text="{Binding [Advice.Repairs], Source={StaticResource Ui}}" Style="{StaticResource H2}" />
+              <ItemsControl ItemsSource="{Binding AdviceRepairs}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid Margin="0,0,0,10">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <StackPanel>
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Reason}" Style="{StaticResource Dim}" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="1" Text="{Binding Range}" FontWeight="SemiBold" Margin="16,0,0,0"
+                                 VerticalAlignment="Top" Foreground="#F4A259" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="{Binding AdviceRepairTotal}" FontWeight="Bold" FontSize="15" Margin="0,2,0,16" />
+
+              <StackPanel Margin="0,0,0,16">
+                <StackPanel.Style>
+                  <Style TargetType="StackPanel">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding AdviceUpgrades.Count}" Value="0">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </StackPanel.Style>
+                <TextBlock Text="{Binding [Advice.Upgrades], Source={StaticResource Ui}}" Style="{StaticResource H2}" />
+                <ItemsControl ItemsSource="{Binding AdviceUpgrades}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                          <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                          <TextBlock Text="{Binding Reason}" Style="{StaticResource Dim}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="{Binding Range}" Margin="16,0,0,0" VerticalAlignment="Top" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+
+              <StackPanel Margin="0,0,0,12"
+                          Visibility="{Binding Advice.NegotiationTip, Converter={StaticResource NullToVisibility}}">
+                <TextBlock Text="{Binding [Advice.Tip], Source={StaticResource Ui}}" Style="{StaticResource H2}" />
+                <TextBlock Text="{Binding Advice.NegotiationTip}" TextWrapping="Wrap" />
+              </StackPanel>
+
+              <TextBlock Text="{Binding [Advice.PriceNote], Source={StaticResource Ui}}" Style="{StaticResource Dim}"
+                         FontSize="11.5" TextWrapping="Wrap" />
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
       </TabItem>
 
       <!-- Tab 2: BIOS & bảo mật -->

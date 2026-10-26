@@ -25,6 +25,9 @@ public sealed record MetricRowView(MetricLine Metric, ComponentModelSpec? Spec, 
 /// <summary>Một ô thông tin nhanh ở phần kết luận: tên linh kiện và vài thông số chính.</summary>
 public sealed record QuickFact(string Label, string Value);
 
+/// <summary>Một dòng chi phí ở tab "Mua hay không", số tiền đã định dạng sẵn.</summary>
+public sealed record CostRow(string Title, string Reason, string Range);
+
 public sealed class MainViewModel : ObservableObject, IDisposable
 {
     private readonly InspectionPipeline _pipeline = new();
@@ -153,6 +156,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(MachineTitle));
             OnPropertyChanged(nameof(SummaryText));
             OnPropertyChanged(nameof(QuickFacts));
+            OnPropertyChanged(nameof(Advice));
+            OnPropertyChanged(nameof(AdviceRepairs));
+            OnPropertyChanged(nameof(AdviceUpgrades));
+            OnPropertyChanged(nameof(AdviceRepairTotal));
+            OnPropertyChanged(nameof(AdviceCostLine));
             OnPropertyChanged(nameof(CrossChecks));
             OnPropertyChanged(nameof(ManualChecklist));
             OnPropertyChanged(nameof(FirmwareFindings));
@@ -316,6 +324,25 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public System.Windows.GridLength VerdictRowHeight => HasResult
         ? new System.Windows.GridLength(2, System.Windows.GridUnitType.Star)
         : new System.Windows.GridLength(0);
+
+    public PurchaseAdvice? Advice => _assessment?.Advice;
+
+    public IReadOnlyList<CostRow> AdviceRepairs => CostRows(CostKind.Repair);
+    public IReadOnlyList<CostRow> AdviceUpgrades => CostRows(CostKind.Upgrade);
+
+    private IReadOnlyList<CostRow> CostRows(CostKind kind) => _assessment?.Advice.Costs
+        .Where(c => c.Kind == kind)
+        .Select(c => new CostRow(c.Title, c.Reason, FormatHelpers.VndRange(c.MinVnd, c.MaxVnd)))
+        .ToList() ?? (IReadOnlyList<CostRow>)Array.Empty<CostRow>();
+
+    public string AdviceRepairTotal => _assessment?.Advice is { HasRepairs: true } a
+        ? Ui["Advice.Total"] + FormatHelpers.VndRange(a.RepairMinVnd, a.RepairMaxVnd)
+        : Ui["Advice.Total"] + "0 ₫";
+
+    /// <summary>Dòng ngắn dưới kết luận ở thẻ tổng: chi phí khắc phục nếu có.</summary>
+    public string? AdviceCostLine => _assessment?.Advice is { HasRepairs: true } a
+        ? Ui["Advice.Total"] + FormatHelpers.VndRange(a.RepairMinVnd, a.RepairMaxVnd)
+        : null;
 
     /// <summary>
     /// Thông tin nhanh của máy ở phần kết luận: model bo mạch, CPU, RAM, từng ổ, card đồ hoạ,

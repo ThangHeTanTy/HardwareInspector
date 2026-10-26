@@ -23,6 +23,23 @@ public static class FormatHelpers
         return S($"{span.TotalMinutes:0} phút", $"{span.TotalMinutes:0} minutes");
     }
 
+    /// <summary>Số tiền dạng ngắn: "850 nghìn ₫", "1,2 triệu ₫" / "850K ₫", "1.2M ₫".</summary>
+    public static string ToVnd(this long amount)
+    {
+        if (amount >= 1_000_000)
+        {
+            var m = Math.Round(amount / 1_000_000d, 1);
+            return S($"{m.ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("vi-VN"))} triệu ₫",
+                     $"{m.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}M ₫");
+        }
+        var k = Math.Round(amount / 1_000d);
+        return S($"{k:0} nghìn ₫", $"{k:0}K ₫");
+    }
+
+    /// <summary>Khoảng tiền: "0,8–1,5 triệu ₫". Hai đầu bằng nhau thì chỉ in một số.</summary>
+    public static string VndRange(long min, long max) =>
+        min == max ? min.ToVnd() : $"{min.ToVnd().Replace(" ₫", string.Empty)} – {max.ToVnd()}";
+
     public static string HoursToHuman(long hours) => TimeSpan.FromHours(hours).ToHumanDuration();
 
     /// <summary>Chuỗi placeholder mà OEM/thợ sửa hay để lại khi ghi lại SMBIOS.</summary>

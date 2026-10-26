@@ -65,6 +65,9 @@ public sealed class MachineAssessment
     public TrustReport Trust { get; set; } = new();
     public Models.Firmware.FirmwareIntegrityReport Firmware { get; set; } = new();
 
+    /// <summary>Kết luận bằng lời thường cho người mua: nên mua, thương lượng hay bỏ qua, kèm chi phí khắc phục.</summary>
+    public PurchaseAdvice Advice { get; set; } = new();
+
     public ComponentAssessment? this[ComponentKind kind] =>
         Components.FirstOrDefault(c => c.Kind == kind);
 }

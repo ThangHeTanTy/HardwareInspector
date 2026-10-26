@@ -26,6 +26,7 @@ public sealed class SecondHandTrustEngine
         deductions += RunFirmwareTrust(snapshot, report);
         deductions += RunIdentityChecks(snapshot, report);
         deductions += RunWearChecks(snapshot, report);
+        deductions += RunOwnershipChecks(snapshot, report);
         deductions += CollectCriticalFindings(components, report);
 
         report.TrustScore = Math.Clamp(100 - deductions, 0, 100);
@@ -322,7 +323,46 @@ public sealed class SecondHandTrustEngine
     }
 
     // ---------------------------------------------------------------------
-    // 5. Gom các phát hiện nghiêm trọng từ mọi linh kiện
+    // 5. Máy có thật sự thuộc về người bán không
+    // ---------------------------------------------------------------------
+    private int RunOwnershipChecks(SystemSnapshot snapshot, TrustReport report)
+    {
+        var o = snapshot.Ownership;
+        if (!o.Collected) return 0;
+
+        if (o.AutopilotProfilePresent || o.MdmEnrollments.Count > 0)
+        {
+            report.CrossChecks.Add(new CrossCheckResult(
+                S("Quyền sở hữu máy", "Machine ownership"), false,
+                S("Máy vẫn đang thuộc hệ thống quản lý của một tổ chức (Autopilot/MDM). Người bán không có toàn quyền với máy này, " +
+                  "và máy có thể bị khoá sau khi cài lại Windows.",
+                  "The machine is still in an organisation's management system (Autopilot/MDM). The seller does not fully control it, " +
+                  "and it may lock itself after a Windows reinstall."),
+                Severity.Critical));
+            return 30;
+        }
+
+        if (o.AbsoluteAgentFound || o.BiosPasswordSet == true || o.IntelAmtActive || o.AzureAdJoined)
+        {
+            report.CrossChecks.Add(new CrossCheckResult(
+                S("Quyền sở hữu máy", "Machine ownership"), false,
+                S("Có dấu vết của máy doanh nghiệp (chống trộm Absolute, mật khẩu BIOS, AMT hoặc tài khoản tổ chức). " +
+                  "Cần người bán gỡ hết trước khi giao máy.",
+                  "There are traces of a corporate machine (Absolute anti-theft, BIOS password, AMT or an organisation account). " +
+                  "The seller must remove them all before handover."),
+                Severity.Warning));
+            return 10;
+        }
+
+        report.CrossChecks.Add(new CrossCheckResult(
+            S("Quyền sở hữu máy", "Machine ownership"), true,
+            S("Không thấy dấu hiệu máy thuộc tổ chức khác hay bị khoá từ xa.",
+              "No sign that the machine belongs to an organisation or can be locked remotely.")));
+        return 0;
+    }
+
+    // ---------------------------------------------------------------------
+    // 6. Gom các phát hiện nghiêm trọng từ mọi linh kiện
     // ---------------------------------------------------------------------
     private int CollectCriticalFindings(IReadOnlyList<ComponentAssessment> components, TrustReport report)
     {
@@ -342,6 +382,7 @@ public sealed class SecondHandTrustEngine
     private TrustLevel DetermineLevel(SystemSnapshot snapshot, TrustReport report)
     {
         if (snapshot.Firmware.Status == IntegrityStatus.Compromised) return TrustLevel.DoNotBuy;
+        if (snapshot.Ownership.AutopilotProfilePresent) return TrustLevel.DoNotBuy;
         if (report.RedFlags.Count(f => f.Severity == Severity.Critical) >= 3) return TrustLevel.DoNotBuy;
 
         return report.TrustScore switch

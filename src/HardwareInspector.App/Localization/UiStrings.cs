@@ -71,6 +71,18 @@ public sealed class UiStrings : INotifyPropertyChanged
 
         // --- Tên các thẻ ---
         ["Tab.Components"] = new("Linh kiện", "Components"),
+        ["Tab.Advice"] = new("Mua hay không", "Buy or not"),
+        ["Advice.Eyebrow"] = new("KẾT LUẬN CHO NGƯỜI MUA", "VERDICT FOR THE BUYER"),
+        ["Advice.Blockers"] = new("Vì sao không nên mua", "Why not to buy"),
+        ["Advice.Conditions"] = new("Người bán phải làm xong trước khi bạn trả tiền", "The seller must do these before you pay"),
+        ["Advice.Repairs"] = new("Chi phí khắc phục ước tính", "Estimated repair costs"),
+        ["Advice.Upgrades"] = new("Nâng cấp nên cân nhắc (không bắt buộc)", "Upgrades worth considering (optional)"),
+        ["Advice.Total"] = new("Tổng chi phí khắc phục: ", "Total repair cost: "),
+        ["Advice.Tip"] = new("Gợi ý trả giá", "Negotiation tip"),
+        ["Advice.None"] = new("Không có khoản nào.", "Nothing here."),
+        ["Advice.PriceNote"] = new(
+            "Giá là mức tham khảo thị trường Việt Nam cho linh kiện phổ thông kèm công thay, để khoảng rộng có chủ đích. Hỏi thêm cửa hàng quen trước khi chốt.",
+            "Prices are Vietnamese market references for common parts including labour, kept deliberately wide. Check with a shop you trust before deciding."),
         ["Tab.Firmware"] = new("BIOS & bảo mật", "BIOS & security"),
         ["Tab.CrossCheck"] = new("Đối chiếu chéo", "Cross-checks"),
         ["Tab.Benchmark"] = new("Kiểm tra tải", "Stress test"),
