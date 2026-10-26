@@ -1,3 +1,5 @@
+using static HardwareInspector.Core.Localization.Loc;
+
 namespace HardwareInspector.Core.Models.Components;
 
 public sealed class MemoryModuleInfo
@@ -26,5 +28,21 @@ public sealed class MemorySubsystemInfo
     public bool IsEccEnabled { get; set; }
 
     /// <summary>Chạy đa kênh hay không — suy ra từ số thanh và vị trí khe.</summary>
-    public string ChannelConfiguration { get; set; } = "Không xác định";
+    /// <summary>
+    /// Số kênh khác nhau suy ra từ nhãn khe; 0 khi nhãn không cho biết kênh.
+    /// Lưu con số thay cho câu mô tả để câu chữ đổi theo ngôn ngữ đang chọn.
+    /// </summary>
+    public int ChannelGroups { get; set; }
+
+    public string ChannelConfiguration => Modules.Count switch
+    {
+        0 => S("Không đọc được", "Unreadable"),
+        1 => S("Single channel (1 thanh)", "Single channel (1 module)"),
+        _ when ChannelGroups == 0 => S($"Không xác định được từ nhãn khe ({Modules.Count} thanh)",
+                                       $"Cannot be determined from slot labels ({Modules.Count} modules)"),
+        _ when ChannelGroups >= 2 => S($"Dual/Multi channel ({Modules.Count} thanh, {ChannelGroups} kênh)",
+                                       $"Dual/Multi channel ({Modules.Count} modules, {ChannelGroups} channels)"),
+        _ => S($"Cùng một kênh ({Modules.Count} thanh) — kiểm tra lại vị trí cắm",
+               $"Same channel ({Modules.Count} modules) — check which slots are used")
+    };
 }

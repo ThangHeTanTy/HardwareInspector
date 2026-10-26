@@ -50,8 +50,10 @@ public sealed class FirmwareAnalyzer : IComponentAnalyzer
         if (!fw.RanWithAdminRights)
             card.Add("FW-PRIV-001", Kind, Severity.Notice,
                 S("Một số phép kiểm tra bị bỏ qua do thiếu quyền Administrator", "Some checks were skipped for lack of Administrator rights"),
-                S("Không kiểm tra được phân vùng EFI, cấu hình khởi động và một phần biến UEFI. ", "The EFI partition, boot configuration and part of the UEFI variables could not be inspected. ") +
-                "Kết luận \"không phát hiện can thiệp\" trong trường hợp này không có nhiều giá trị.",
+                S("Không kiểm tra được phân vùng EFI, cấu hình khởi động và một phần biến UEFI. " +
+                  "Kết luận \"không phát hiện can thiệp\" trong trường hợp này không có nhiều giá trị.",
+                  "The EFI partition, boot configuration and part of the UEFI variables could not be inspected. " +
+                  "A \"no tampering found\" conclusion carries little weight in this case."),
                 S("Đóng ứng dụng và mở lại bằng chuột phải → Run as administrator.", "Close the app and reopen it with right-click → Run as administrator."),
                 penalty: 0, confidence: 1.0);
 

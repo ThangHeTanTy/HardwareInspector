@@ -12,7 +12,7 @@ namespace HardwareInspector.Firmware.Checks;
 public sealed class OemLicenseCheck : IFirmwareCheck
 {
     public string Id => "FW-MSDM";
-    public string Title => "Khoá Windows nhúng trong firmware";
+    public string Title => S("Khoá Windows nhúng trong firmware", "Windows key embedded in firmware");
     public bool RequiresAdmin => false;
 
     private static readonly string[] BrandedOems =
@@ -36,13 +36,20 @@ public sealed class OemLicenseCheck : IFirmwareCheck
                 Code = "FW-MSDM-001",
                 Component = ComponentKind.Firmware,
                 Severity = Severity.Warning,
-                Title = "Laptop thương hiệu nhưng firmware không có khoá Windows OEM",
-                Detail = $"Không tìm thấy bảng MSDM hay SLIC trên máy {ctx.Snapshot.Baseboard.SystemManufacturer}. " +
+                Title = S("Laptop thương hiệu nhưng firmware không có khoá Windows OEM",
+"Branded laptop but the firmware has no Windows OEM key"),
+                Detail = S($"Không tìm thấy bảng MSDM hay SLIC trên máy {ctx.Snapshot.Baseboard.SystemManufacturer}. " +
                          "Laptop bán kèm Windows từ nhà máy luôn có một trong hai bảng này, và nó nằm trong firmware " +
                          "chứ không nằm trên ổ cứng nên không mất khi cài lại Windows.",
-                Recommendation = "Hai khả năng: máy vốn bán ra không kèm Windows (FreeDOS), " +
+$"No MSDM or SLIC table found on this {ctx.Snapshot.Baseboard.SystemManufacturer} machine. " +
+                         "Laptops sold with Windows from the factory always have one of these tables, and it lives in the firmware " +
+                         "rather than on the drive, so it survives a Windows reinstall."),
+                Recommendation = S("Hai khả năng: máy vốn bán ra không kèm Windows (FreeDOS), " +
                                  "hoặc bo mạch/BIOS đã được thay hay ghi lại. " +
                                  "Tra cấu hình xuất xưởng theo serial trên trang hãng để phân biệt.",
+"Two possibilities: the machine was originally sold without Windows (FreeDOS), " +
+                                 "or the board/BIOS was replaced or rewritten. " +
+                                 "Look up the factory configuration by serial on the manufacturer's site to tell which."),
                 Source = EvidenceSource.AcpiTable,
                 ScorePenalty = 14,
                 Confidence = 0.6
@@ -50,19 +57,23 @@ public sealed class OemLicenseCheck : IFirmwareCheck
         }
 
         if (hasMsdm && !string.IsNullOrWhiteSpace(channel) &&
-            !channel.Contains("OEM", StringComparison.OrdinalIgnoreCase) &&
-            !channel.Contains("Không xác định", StringComparison.OrdinalIgnoreCase))
+            !channel.Contains("OEM", StringComparison.OrdinalIgnoreCase))
         {
             yield return new Finding
             {
                 Code = "FW-MSDM-002",
                 Component = ComponentKind.OperatingSystem,
                 Severity = Severity.Notice,
-                Title = "Firmware có khoá OEM nhưng Windows đang kích hoạt bằng kênh khác",
-                Detail = $"Kênh cấp phép hiện tại: {channel}. Máy có sẵn khoá OEM trong firmware " +
+                Title = S("Firmware có khoá OEM nhưng Windows đang kích hoạt bằng kênh khác",
+"The firmware has an OEM key but Windows is activated through another channel"),
+                Detail = S($"Kênh cấp phép hiện tại: {channel}. Máy có sẵn khoá OEM trong firmware " +
                          "nhưng người cài lại dùng khoá Volume hoặc công cụ kích hoạt ngoài.",
-                Recommendation = "Cài lại Windows sạch để máy tự nhận khoá OEM trong firmware. " +
+$"Current license channel: {channel}. The machine has an OEM key in its firmware " +
+                         "but whoever reinstalled it used a Volume key or an external activation tool."),
+                Recommendation = S("Cài lại Windows sạch để máy tự nhận khoá OEM trong firmware. " +
                                  "Nếu máy đang kích hoạt bằng công cụ crack, hãy coi toàn bộ hệ điều hành là không tin cậy.",
+"Clean-install Windows so it picks up the OEM key from the firmware automatically. " +
+                                 "If it is activated with a crack tool, treat the whole OS as untrusted."),
                 Source = EvidenceSource.AcpiTable,
                 ScorePenalty = 8,
                 Confidence = 0.7
@@ -71,6 +82,6 @@ public sealed class OemLicenseCheck : IFirmwareCheck
 
         if (hasMsdm)
             yield return Finding.Info("FW-MSDM-003", ComponentKind.Firmware,
-                "Firmware có khoá Windows OEM nguyên bản (bảng MSDM)");
+                S("Firmware có khoá Windows OEM nguyên bản (bảng MSDM)", "The firmware carries an original Windows OEM key (MSDM table)"));
     }
 }

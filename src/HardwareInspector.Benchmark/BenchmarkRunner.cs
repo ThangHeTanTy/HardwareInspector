@@ -1,4 +1,5 @@
 using HardwareInspector.Core.Abstractions;
+using static HardwareInspector.Core.Localization.Loc;
 
 namespace HardwareInspector.Benchmark;
 
@@ -39,7 +40,9 @@ public sealed class BenchmarkRunner
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                results.Add(new BenchmarkResult(benchmark.Name, "—", 0, $"Không chạy được: {ex.Message}"));
+                var message = ex.Message;
+                results.Add(BenchmarkResult.Localized(() =>
+                    new BenchmarkResult(benchmark.Name, "—", 0, S($"Không chạy được: {message}", $"Could not run: {message}"))));
             }
         }
 

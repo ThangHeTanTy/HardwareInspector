@@ -1,3 +1,5 @@
+using static HardwareInspector.Core.Localization.Loc;
+
 namespace HardwareInspector.Core.Utils;
 
 public static class FormatHelpers
@@ -15,10 +17,10 @@ public static class FormatHelpers
 
     public static string ToHumanDuration(this TimeSpan span)
     {
-        if (span.TotalDays >= 365) return $"{span.TotalDays / 365:0.#} năm ({span.TotalHours:N0} giờ)";
-        if (span.TotalDays >= 1) return $"{span.TotalDays:0.#} ngày ({span.TotalHours:N0} giờ)";
-        if (span.TotalHours >= 1) return $"{span.TotalHours:0.#} giờ";
-        return $"{span.TotalMinutes:0} phút";
+        if (span.TotalDays >= 365) return S($"{span.TotalDays / 365:0.#} năm ({span.TotalHours:N0} giờ)", $"{span.TotalDays / 365:0.#} years ({span.TotalHours:N0} hours)");
+        if (span.TotalDays >= 1) return S($"{span.TotalDays:0.#} ngày ({span.TotalHours:N0} giờ)", $"{span.TotalDays:0.#} days ({span.TotalHours:N0} hours)");
+        if (span.TotalHours >= 1) return S($"{span.TotalHours:0.#} giờ", $"{span.TotalHours:0.#} hours");
+        return S($"{span.TotalMinutes:0} phút", $"{span.TotalMinutes:0} minutes");
     }
 
     public static string HoursToHuman(long hours) => TimeSpan.FromHours(hours).ToHumanDuration();

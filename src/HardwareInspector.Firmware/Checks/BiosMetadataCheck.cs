@@ -13,7 +13,7 @@ namespace HardwareInspector.Firmware.Checks;
 public sealed class BiosMetadataCheck : IFirmwareCheck
 {
     public string Id => "FW-BIOS";
-    public string Title => "Siêu dữ liệu BIOS";
+    public string Title => S("Siêu dữ liệu BIOS", "BIOS metadata");
     public bool RequiresAdmin => false;
 
     /// <summary>Chuỗi đặc trưng của các bản BIOS đã bị chỉnh sửa hoặc build lại.</summary>
@@ -42,11 +42,16 @@ public sealed class BiosMetadataCheck : IFirmwareCheck
                     Code = "FW-BIOS-001",
                     Component = ComponentKind.Firmware,
                     Severity = Severity.Critical,
-                    Title = "Chuỗi phiên bản BIOS chứa dấu hiệu bản chỉnh sửa",
-                    Detail = $"Phiên bản báo về: \"{bios.Version}\" (khớp từ khoá \"{hit}\"). " +
+                    Title = S("Chuỗi phiên bản BIOS chứa dấu hiệu bản chỉnh sửa",
+                    "The BIOS version string shows signs of a modified build"),
+                    Detail = S($"Phiên bản báo về: \"{bios.Version}\" (khớp từ khoá \"{hit}\"). " +
                              "BIOS chính hãng dùng định dạng số hoặc mã nội bộ cố định, không mang các từ này.",
-                    Recommendation = "Tải BIOS gốc từ trang chủ hãng theo đúng serial và nạp lại. " +
+                             $"Reported version: \"{bios.Version}\" (matched keyword \"{hit}\"). " +
+                             "Genuine BIOSes use fixed numeric or internal codes and never carry these words."),
+                    Recommendation = S("Tải BIOS gốc từ trang chủ hãng theo đúng serial và nạp lại. " +
                                      "Nếu máy đang chạy BIOS mod để mở khoá tính năng, mọi bảo hành đều mất hiệu lực.",
+                                     "Download the original BIOS for this serial from the manufacturer's site and reflash it. " +
+                                     "If the machine runs a modded BIOS to unlock features, every warranty is void."),
                     Source = EvidenceSource.Smbios,
                     ScorePenalty = 35,
                     Confidence = 0.7,
@@ -62,9 +67,12 @@ public sealed class BiosMetadataCheck : IFirmwareCheck
                 Code = "FW-BIOS-002",
                 Component = ComponentKind.Firmware,
                 Severity = Severity.Warning,
-                Title = "Không xác định được nhà cung cấp BIOS",
-                Detail = $"Trường vendor đọc được: \"{bios.Vendor.OrDash()}\".",
-                Recommendation = "Kiểm tra lại bằng cách vào thẳng màn hình BIOS khi khởi động.",
+                Title = S("Không xác định được nhà cung cấp BIOS",
+                "The BIOS vendor could not be identified"),
+                Detail = S($"Trường vendor đọc được: \"{bios.Vendor.OrDash()}\".",
+                $"Vendor field read: \"{bios.Vendor.OrDash()}\"."),
+                Recommendation = S("Kiểm tra lại bằng cách vào thẳng màn hình BIOS khi khởi động.",
+                "Check by entering the BIOS screen directly at boot."),
                 Source = EvidenceSource.Smbios,
                 ScorePenalty = 12,
                 Confidence = 0.7
@@ -82,10 +90,14 @@ public sealed class BiosMetadataCheck : IFirmwareCheck
                     Code = "FW-BIOS-003",
                     Component = ComponentKind.Firmware,
                     Severity = Severity.Warning,
-                    Title = "Ngày phát hành BIOS nằm ở tương lai",
-                    Detail = $"BIOS ghi ngày {bios.ReleaseDate:dd/MM/yyyy}. " +
+                    Title = S("Ngày phát hành BIOS nằm ở tương lai",
+                    "The BIOS release date is in the future"),
+                    Detail = S($"BIOS ghi ngày {bios.ReleaseDate:dd/MM/yyyy}. " +
                              "Điều này xảy ra khi bảng SMBIOS bị ghi tay hoặc đồng hồ hệ thống sai.",
-                    Recommendation = "Kiểm tra ngày giờ hệ thống trước. Nếu giờ hệ thống đúng, bảng SMBIOS đã bị sửa.",
+                             $"The BIOS says {bios.ReleaseDate:dd/MM/yyyy}. " +
+                             "This happens when the SMBIOS table was written by hand or the system clock is wrong."),
+                    Recommendation = S("Kiểm tra ngày giờ hệ thống trước. Nếu giờ hệ thống đúng, bảng SMBIOS đã bị sửa.",
+                    "Check the system date and time first. If it is correct, the SMBIOS table was edited."),
                     Source = EvidenceSource.Smbios,
                     ScorePenalty = 20,
                     Confidence = 0.85
@@ -98,10 +110,14 @@ public sealed class BiosMetadataCheck : IFirmwareCheck
                     Code = "FW-BIOS-004",
                     Component = ComponentKind.Firmware,
                     Severity = Severity.Notice,
-                    Title = $"BIOS chưa được cập nhật trong {age.TotalDays / 365:0.#} năm",
-                    Detail = $"Bản BIOS đang chạy phát hành ngày {bios.ReleaseDate:dd/MM/yyyy}. " +
+                    Title = S($"BIOS chưa được cập nhật trong {age.TotalDays / 365:0.#} năm",
+                    $"The BIOS has not been updated in {age.TotalDays / 365:0.#} years"),
+                    Detail = S($"Bản BIOS đang chạy phát hành ngày {bios.ReleaseDate:dd/MM/yyyy}. " +
                              "Các lỗ hổng firmware công bố sau mốc này đều chưa được vá.",
-                    Recommendation = "Cập nhật BIOS từ trang chủ hãng, ưu tiên bản có vá microcode CPU.",
+                             $"The running BIOS was released on {bios.ReleaseDate:dd/MM/yyyy}. " +
+                             "Firmware vulnerabilities disclosed after that date are unpatched."),
+                    Recommendation = S("Cập nhật BIOS từ trang chủ hãng, ưu tiên bản có vá microcode CPU.",
+                    "Update the BIOS from the manufacturer's site, preferably a version with CPU microcode fixes."),
                     Source = EvidenceSource.Smbios,
                     ScorePenalty = 6,
                     Confidence = 0.9
@@ -116,10 +132,14 @@ public sealed class BiosMetadataCheck : IFirmwareCheck
                     Code = "FW-BIOS-005",
                     Component = ComponentKind.Firmware,
                     Severity = Severity.Notice,
-                    Title = "Windows được cài trước ngày phát hành BIOS",
-                    Detail = $"Windows cài ngày {os.InstallDate:dd/MM/yyyy}, BIOS phát hành {bios.ReleaseDate:dd/MM/yyyy}. " +
+                    Title = S("Windows được cài trước ngày phát hành BIOS",
+                    "Windows was installed before the BIOS release date"),
+                    Detail = S($"Windows cài ngày {os.InstallDate:dd/MM/yyyy}, BIOS phát hành {bios.ReleaseDate:dd/MM/yyyy}. " +
                              "Thường gặp khi BIOS mới được nạp lại gần đây, hoặc khi ổ cứng được bê từ máy khác sang.",
-                    Recommendation = "Hỏi người bán gần đây có cập nhật BIOS hoặc thay bo mạch không.",
+                             $"Windows installed on {os.InstallDate:dd/MM/yyyy}, BIOS released {bios.ReleaseDate:dd/MM/yyyy}. " +
+                             "Usually the BIOS was reflashed recently, or the drive was moved from another machine."),
+                    Recommendation = S("Hỏi người bán gần đây có cập nhật BIOS hoặc thay bo mạch không.",
+                    "Ask the seller whether the BIOS was recently updated or the board replaced."),
                     Source = EvidenceSource.Smbios,
                     ScorePenalty = 5,
                     Confidence = 0.5
@@ -142,10 +162,14 @@ public sealed class BiosMetadataCheck : IFirmwareCheck
                     Code = "FW-BIOS-006",
                     Component = ComponentKind.Firmware,
                     Severity = Severity.Warning,
-                    Title = "Microcode CPU đang chạy thấp hơn bản BIOS nạp lúc khởi động",
-                    Detail = $"BIOS nạp {cpu.MicrocodePrevious}, hệ thống hiện chạy {cpu.MicrocodeCurrent}. " +
+                    Title = S("Microcode CPU đang chạy thấp hơn bản BIOS nạp lúc khởi động",
+                    "The running CPU microcode is older than what the BIOS loaded at boot"),
+                    Detail = S($"BIOS nạp {cpu.MicrocodePrevious}, hệ thống hiện chạy {cpu.MicrocodeCurrent}. " +
                              "Hạ cấp microcode là kỹ thuật quen thuộc để mở lại các lỗ hổng đã bị vá.",
-                    Recommendation = "Khởi động lại và kiểm tra lại. Nếu vẫn thấp hơn, xem lại driver hoặc công cụ nạp microcode đang chạy trên máy.",
+                             $"The BIOS loaded {cpu.MicrocodePrevious}, the system now runs {cpu.MicrocodeCurrent}. " +
+                             "Downgrading microcode is a well-known way to reopen patched vulnerabilities."),
+                    Recommendation = S("Khởi động lại và kiểm tra lại. Nếu vẫn thấp hơn, xem lại driver hoặc công cụ nạp microcode đang chạy trên máy.",
+                    "Restart and check again. If it is still lower, look at the drivers or microcode loaders running on the machine."),
                     Source = EvidenceSource.Registry,
                     ScorePenalty = 18,
                     Confidence = 0.65

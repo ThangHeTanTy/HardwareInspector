@@ -13,7 +13,7 @@ namespace HardwareInspector.Firmware.Checks;
 public sealed class WpbtCheck : IFirmwareCheck
 {
     public string Id => "FW-WPBT";
-    public string Title => "Bảng nhị phân nền tảng (WPBT)";
+    public string Title => S("Bảng nhị phân nền tảng (WPBT)", "Windows Platform Binary Table (WPBT)");
     public bool RequiresAdmin => false;
 
     public IEnumerable<Finding> Run(FirmwareContext ctx)
@@ -28,14 +28,22 @@ public sealed class WpbtCheck : IFirmwareCheck
             Code = "FW-WPBT-001",
             Component = ComponentKind.Firmware,
             Severity = Severity.Warning,
-            Title = "Firmware có nhúng chương trình tự chạy vào Windows (WPBT)",
-            Detail = $"Phát hiện bảng ACPI WPBT ({wpbt.Length} byte, OEM: {wpbt.OemId ?? "không rõ"}). " +
+            Title = S("Firmware có nhúng chương trình tự chạy vào Windows (WPBT)",
+"The firmware embeds a program that auto-runs in Windows (WPBT)"),
+            Detail = S($"Phát hiện bảng ACPI WPBT ({wpbt.Length} byte, OEM: {wpbt.OemId ?? "không rõ"}). " +
                      "Bảng này chứa một file thực thi mà Windows nạp và chạy với quyền hệ thống ở mỗi lần khởi động. " +
                      "Nó tồn tại độc lập với ổ cứng, nên format hay cài lại Windows đều không xoá được.",
-            Recommendation = $"Kiểm tra xem {(string.IsNullOrWhiteSpace(vendor) ? "hãng sản xuất" : vendor)} " +
+$"ACPI WPBT table found ({wpbt.Length} bytes, OEM: {wpbt.OemId ?? "unknown"}). " +
+                     "It contains an executable that Windows loads and runs with system rights at every boot. " +
+                     "It lives independently of the drive, so formatting or reinstalling Windows cannot remove it."),
+            Recommendation = S($"Kiểm tra xem {(string.IsNullOrWhiteSpace(vendor) ? "hãng sản xuất" : vendor)} " +
                              "có công bố dùng WPBT cho phần mềm nào không (Lenovo, ASUS, Dell từng dùng cho driver hoặc anti-theft). " +
                              "Nếu hãng không dùng WPBT cho dòng máy này, đây là dấu hiệu firmware đã bị chỉnh sửa. " +
                              "Đối chiếu thêm: quét tiến trình lạ ngay sau khi cài mới Windows offline.",
+$"Check whether {(string.IsNullOrWhiteSpace(vendor) ? "the manufacturer" : vendor)} " +
+                             "documents using WPBT for any software (Lenovo, ASUS and Dell have used it for drivers or anti-theft). " +
+                             "If the manufacturer does not use WPBT on this line, the firmware has been modified. " +
+                             "Also cross-check: look for unknown processes right after a fresh offline Windows install."),
             Source = EvidenceSource.AcpiTable,
             ScorePenalty = 20,
             Confidence = 0.75,

@@ -16,15 +16,21 @@ namespace HardwareInspector.Firmware;
 /// Điều phối toàn bộ khối kiểm tra firmware: đọc dữ liệu thô một lần,
 /// chạy tất cả phép kiểm tra, rồi tổng hợp thành một kết luận duy nhất.
 /// </summary>
-public sealed class FirmwareIntegrityService : IInfoCollector
+public sealed class FirmwareIntegrityService : IInfoCollector, IRelocalizable
 {
-    public string Name => "Kiểm tra toàn vẹn firmware";
+    public string Name => S("Kiểm tra toàn vẹn firmware", "Firmware integrity checks");
     public int Order => 90;
 
     // Gắn phân vùng EFI, băm từng file .efi và chạy bcdedit.
     public int Weight => 5;
 
     private readonly IReadOnlyList<IFirmwareCheck> _checks;
+
+    /// <summary>
+    /// Dữ liệu thô của lượt quét gần nhất. Các phép kiểm tra chỉ đọc từ đây, nên đổi ngôn ngữ
+    /// thì chạy lại chúng là có câu chữ mới mà không phải gắn lại phân vùng EFI hay gọi bcdedit.
+    /// </summary>
+    private FirmwareContext? _lastContext;
 
     public FirmwareIntegrityService(IEnumerable<IFirmwareCheck>? checks = null)
     {
@@ -86,10 +92,24 @@ public sealed class FirmwareIntegrityService : IInfoCollector
             IsElevated = elevated
         };
 
+        _lastContext = ctx;
+        RunChecks(ctx, report, ct);
+        return Task.CompletedTask;
+    }
+
+    public void Relocalize(SystemSnapshot snapshot)
+    {
+        if (_lastContext is not { } ctx || !ReferenceEquals(ctx.Snapshot, snapshot)) return;
+        snapshot.Firmware.Findings.Clear();
+        RunChecks(ctx, snapshot.Firmware, CancellationToken.None);
+    }
+
+    private void RunChecks(FirmwareContext ctx, FirmwareIntegrityReport report, CancellationToken ct)
+    {
         foreach (var check in _checks)
         {
             ct.ThrowIfCancellationRequested();
-            if (check.RequiresAdmin && !elevated) continue;
+            if (check.RequiresAdmin && !ctx.IsElevated) continue;
 
             try { report.Findings.AddRange(check.Run(ctx)); }
             catch (Exception ex)
@@ -99,15 +119,14 @@ public sealed class FirmwareIntegrityService : IInfoCollector
                     Code = $"{check.Id}-ERR",
                     Component = ComponentKind.Firmware,
                     Severity = Severity.Info,
-                    Title = $"Phép kiểm tra \"{check.Title}\" không hoàn tất",
+                    Title = S($"Phép kiểm tra \"{check.Title}\" không hoàn tất", $"The \"{check.Title}\" check did not complete"),
                     Detail = ex.Message,
                     Confidence = 1.0
                 });
             }
         }
 
-        report.Status = Conclude(report, elevated);
-        return Task.CompletedTask;
+        report.Status = Conclude(report, ctx.IsElevated);
     }
 
     /// <summary>

@@ -32,9 +32,9 @@ public static class SmbiosSlotCatalog
         [0x24] = new("U.2 PCIe Gen4", ExpansionSlotKind.U2, 4, 4),
         [0x25] = new("U.2 PCIe Gen5", ExpansionSlotKind.U2, 5, 4),
 
-        [0x21] = new("PCIe Mini 52 chân", ExpansionSlotKind.Mini, null, null),
-        [0x22] = new("PCIe Mini 52 chân", ExpansionSlotKind.Mini, null, null),
-        [0x23] = new("PCIe Mini 76 chân", ExpansionSlotKind.Mini, null, null),
+        [0x21] = new("PCIe Mini 52-pin", ExpansionSlotKind.Mini, null, null),
+        [0x22] = new("PCIe Mini 52-pin", ExpansionSlotKind.Mini, null, null),
+        [0x23] = new("PCIe Mini 76-pin", ExpansionSlotKind.Mini, null, null),
 
         // PCI Express không nêu thế hệ
         [0xA5] = new("PCI Express", ExpansionSlotKind.PciExpress, null, null),
@@ -71,11 +71,11 @@ public static class SmbiosSlotCatalog
         [0xC1] = new("PCIe Gen5 x4", ExpansionSlotKind.PciExpress, 5, 4),
         [0xC2] = new("PCIe Gen5 x8", ExpansionSlotKind.PciExpress, 5, 8),
         [0xC3] = new("PCIe Gen5 x16", ExpansionSlotKind.PciExpress, 5, 16),
-        [0xC4] = new("PCIe Gen6 trở lên", ExpansionSlotKind.PciExpress, 6, null)
+        [0xC4] = new("PCIe Gen6+", ExpansionSlotKind.PciExpress, 6, null)
     };
 
     public static SlotType Lookup(byte code) =>
-        Map.TryGetValue(code, out var t) ? t : new SlotType($"Khe loại 0x{code:X2}", ExpansionSlotKind.Unknown, null, null);
+        Map.TryGetValue(code, out var t) ? t : new SlotType($"Slot type 0x{code:X2}", ExpansionSlotKind.Unknown, null, null);
 
     /// <summary>Số làn lấy từ trường Data Bus Width (offset 06h) khi mã loại khe không nói rõ.</summary>
     public static int? LanesFromBusWidth(byte code) => code switch

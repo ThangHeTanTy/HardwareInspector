@@ -22,8 +22,7 @@ public partial class App : Application
     {
         LogFatal(e.Exception);
         MessageBox.Show(
-            $"Đã xảy ra lỗi ngoài dự kiến:\n\n{e.Exception.Message}\n\n" +
-            "Ứng dụng vẫn tiếp tục chạy, nhưng kết quả của bước vừa rồi có thể không đầy đủ.",
+            string.Format(Localization.UiStrings.Instance["Msg.Unexpected"], e.Exception.Message),
             "Hardware Inspector", MessageBoxButton.OK, MessageBoxImage.Warning);
         e.Handled = true;
     }

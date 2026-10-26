@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using HardwareInspector.Core.Abstractions;
 using HardwareInspector.Core.Models;
+using static HardwareInspector.Core.Localization.Loc;
 
 namespace HardwareInspector.Benchmark;
 
@@ -14,7 +15,7 @@ public sealed class StorageSpeedBenchmark : IBenchmark
     private const int FileSizeMb = 512;
     private const int ChunkSize = 4 * 1024 * 1024;
 
-    public string Name => "Tốc độ đọc/ghi tuần tự";
+    public string Name => S("Tốc độ đọc/ghi tuần tự", "Sequential read/write speed");
     public ComponentKind Target => ComponentKind.Storage;
     public TimeSpan EstimatedDuration => TimeSpan.FromSeconds(30);
 
@@ -66,14 +67,15 @@ public sealed class StorageSpeedBenchmark : IBenchmark
 
         progress?.Report(1);
 
-        return new BenchmarkResult(
+        return BenchmarkResult.Localized(() => new BenchmarkResult(
             Name, "MB/s", Math.Round(readMbps, 0),
-            $"Đọc {readMbps:0} MB/s · Ghi {writeMbps:0} MB/s trên ổ chứa thư mục tạm",
+            S($"Đọc {readMbps:0} MB/s · Ghi {writeMbps:0} MB/s trên ổ chứa thư mục tạm",
+              $"Read {readMbps:0} MB/s · Write {writeMbps:0} MB/s on the temp folder's drive"),
             new Dictionary<string, string>
             {
                 ["ReadMBps"] = readMbps.ToString("0"),
                 ["WriteMBps"] = writeMbps.ToString("0"),
                 ["FileSizeMB"] = FileSizeMb.ToString()
-            });
+            }));
     }
 }

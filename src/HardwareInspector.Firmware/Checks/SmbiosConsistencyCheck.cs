@@ -13,7 +13,7 @@ namespace HardwareInspector.Firmware.Checks;
 public sealed class SmbiosConsistencyCheck : IFirmwareCheck
 {
     public string Id => "FW-SMBIOS";
-    public string Title => "Tính nhất quán của bảng SMBIOS";
+    public string Title => S("Tính nhất quán của bảng SMBIOS", "SMBIOS table consistency");
     public bool RequiresAdmin => false;
 
     public IEnumerable<Finding> Run(FirmwareContext ctx)
@@ -25,8 +25,10 @@ public sealed class SmbiosConsistencyCheck : IFirmwareCheck
                 Code = "FW-SMBIOS-000",
                 Component = ComponentKind.Firmware,
                 Severity = Severity.Notice,
-                Title = "Không đọc được bảng SMBIOS thô",
-                Detail = "Ứng dụng chỉ dựa được vào dữ liệu WMI đã qua xử lý, độ tin cậy thấp hơn.",
+                Title = S("Không đọc được bảng SMBIOS thô",
+"Could not read the raw SMBIOS table"),
+                Detail = S("Ứng dụng chỉ dựa được vào dữ liệu WMI đã qua xử lý, độ tin cậy thấp hơn.",
+"The app can only rely on processed WMI data, which is less trustworthy."),
                 Source = EvidenceSource.Smbios,
                 ScorePenalty = 0,
                 Confidence = 1.0
@@ -59,13 +61,20 @@ public sealed class SmbiosConsistencyCheck : IFirmwareCheck
                 Code = "FW-SMBIOS-001",
                 Component = ComponentKind.Firmware,
                 Severity = Severity.Warning,
-                Title = $"{placeholders.Count} trường định danh trong SMBIOS để giá trị mặc định",
-                Detail = "Máy nguyên bản của hãng lớn luôn có serial và model được nạp tại nhà máy. " +
+                Title = S($"{placeholders.Count} trường định danh trong SMBIOS để giá trị mặc định",
+$"{placeholders.Count} SMBIOS identity fields are left at default values"),
+                Detail = S("Máy nguyên bản của hãng lớn luôn có serial và model được nạp tại nhà máy. " +
                          "Nhiều trường bỏ trống cùng lúc thường gặp ở ba tình huống: bo mạch thay thế không phải hàng OEM, " +
                          "BIOS được ghi lại bằng programmer mà không nạp lại vùng định danh, hoặc máy lắp từ linh kiện rời.\n\n" +
                          string.Join("\n", placeholders),
-                Recommendation = "Đối chiếu serial in trên tem đáy máy với serial phần mềm đọc được. " +
+"Original machines from major brands always have the serial and model programmed at the factory. " +
+                         "Many blank fields at once usually means one of three things: a non-OEM replacement board, " +
+                         "a BIOS rewritten with a programmer without restoring the identity area, or a machine built from loose parts.\n\n" +
+                         string.Join("\n", placeholders)),
+                Recommendation = S("Đối chiếu serial in trên tem đáy máy với serial phần mềm đọc được. " +
                                  "Lệch nhau là bằng chứng rõ ràng bo mạch hoặc BIOS đã bị thay.",
+"Compare the serial on the label under the machine with the serial this app reads. " +
+                                 "A mismatch is clear evidence the board or BIOS was replaced."),
                 Source = EvidenceSource.Smbios,
                 ScorePenalty = 18,
                 Confidence = 0.8,
@@ -86,11 +95,16 @@ public sealed class SmbiosConsistencyCheck : IFirmwareCheck
                 Code = "FW-SMBIOS-002",
                 Component = ComponentKind.Firmware,
                 Severity = Severity.Notice,
-                Title = "Serial hệ thống khác serial vỏ máy",
-                Detail = $"System: {system.Serial} — Chassis: {chassis.Serial}. " +
+                Title = S("Serial hệ thống khác serial vỏ máy",
+"The system serial differs from the chassis serial"),
+                Detail = S($"System: {system.Serial} — Chassis: {chassis.Serial}. " +
                          "Trên laptop nguyên bản hai giá trị này thường giống nhau. " +
                          "Khác nhau có thể do bo mạch được thay bằng bo của máy khác, hoặc do OEM đó vốn ghi khác nhau.",
-                Recommendation = "Tra serial trên trang bảo hành của hãng. Nếu tra ra model khác với máy đang cầm, dừng giao dịch.",
+$"System: {system.Serial} — Chassis: {chassis.Serial}. " +
+                         "On original laptops these two are usually the same. " +
+                         "A difference may mean the board came from another machine, or that this OEM simply writes them differently."),
+                Recommendation = S("Tra serial trên trang bảo hành của hãng. Nếu tra ra model khác với máy đang cầm, dừng giao dịch.",
+"Look the serial up on the manufacturer's warranty site. If it shows a different model from the machine in your hands, stop the deal."),
                 Source = EvidenceSource.Smbios,
                 ScorePenalty = 10,
                 Confidence = 0.55
@@ -105,10 +119,14 @@ public sealed class SmbiosConsistencyCheck : IFirmwareCheck
                 Code = "FW-SMBIOS-003",
                 Component = ComponentKind.Motherboard,
                 Severity = Severity.Notice,
-                Title = "Cảm biến vỏ máy ghi nhận máy đã từng được mở",
-                Detail = "SMBIOS Type 3 báo trạng thái an ninh vỏ máy ở mức đã bị can thiệp.",
-                Recommendation = "Không nhất thiết xấu — máy đã vệ sinh hoặc nâng cấp RAM cũng kích hoạt cờ này. " +
+                Title = S("Cảm biến vỏ máy ghi nhận máy đã từng được mở",
+"The chassis sensor recorded that the machine has been opened"),
+                Detail = S("SMBIOS Type 3 báo trạng thái an ninh vỏ máy ở mức đã bị can thiệp.",
+"SMBIOS Type 3 reports the chassis security status as tampered."),
+                Recommendation = S("Không nhất thiết xấu — máy đã vệ sinh hoặc nâng cấp RAM cũng kích hoạt cờ này. " +
                                  "Hãy hỏi thẳng người bán máy đã được mở ra làm gì.",
+"Not necessarily bad — cleaning or a RAM upgrade also sets this flag. " +
+                                 "Ask the seller directly why the machine was opened."),
                 Source = EvidenceSource.Smbios,
                 ScorePenalty = 5,
                 Confidence = 0.6

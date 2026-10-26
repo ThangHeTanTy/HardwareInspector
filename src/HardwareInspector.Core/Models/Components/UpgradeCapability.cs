@@ -1,3 +1,5 @@
+using static HardwareInspector.Core.Localization.Loc;
+
 namespace HardwareInspector.Core.Models.Components;
 
 /// <summary>Một khe RAM, kể cả khe đang trống — thứ mà WMI không liệt kê.</summary>
@@ -8,10 +10,20 @@ public sealed class MemorySlotState
     public bool IsOccupied { get; set; }
     public long CapacityBytes { get; set; }
     public string MemoryType { get; set; } = string.Empty;
-    public string FormFactor { get; set; } = string.Empty;
-
     /// <summary>Mã form factor thô của SMBIOS. 0x0D = SODIMM, 0x0F = chip hàn thẳng lên bo.</summary>
     public byte FormFactorCode { get; set; }
+
+    public string FormFactor => FormFactorCode switch
+    {
+        0 => string.Empty,
+        0x08 => "DIMM",
+        0x09 => "TSOP",
+        0x0B => "RIMM",
+        0x0C => "SIMM",
+        0x0D => "SODIMM",
+        0x0F => S("Chip hàn trên bo", "Soldered chips"),
+        _ => S("Khác", "Other")
+    };
 
     public int SpeedMtps { get; set; }
     public string PartNumber { get; set; } = string.Empty;
@@ -118,7 +130,18 @@ public sealed class UpgradeCapability
     // --- Bộ nhớ ---
     public long MaxMemoryBytes { get; set; }
     public int MemorySlotsTotal { get; set; }
-    public string MemoryErrorCorrection { get; set; } = string.Empty;
+    /// <summary>Mã Memory Error Correction của SMBIOS Type 16; 0 khi không đọc được.</summary>
+    public byte MemoryErrorCorrectionCode { get; set; }
+
+    public string MemoryErrorCorrection => MemoryErrorCorrectionCode switch
+    {
+        3 => S("Không có", "None"),
+        4 => "Parity",
+        5 => S("ECC một bit", "Single-bit ECC"),
+        6 => S("ECC nhiều bit", "Multi-bit ECC"),
+        7 => "CRC",
+        _ => S("Không xác định", "Unknown")
+    };
     public List<MemorySlotState> MemorySlots { get; } = new();
 
     public int MemorySlotsOccupied => MemorySlots.Count(s => s.IsOccupied);
@@ -132,11 +155,11 @@ public sealed class UpgradeCapability
 
     public string InstalledMemoryType =>
         MemorySlots.FirstOrDefault(s => s.IsOccupied && !string.IsNullOrWhiteSpace(s.MemoryType))?.MemoryType
-        ?? "Không xác định";
+        ?? S("Không xác định", "Unknown");
 
     public string InstalledFormFactor =>
         MemorySlots.FirstOrDefault(s => s.IsOccupied && !string.IsNullOrWhiteSpace(s.FormFactor))?.FormFactor
-        ?? "Không xác định";
+        ?? S("Không xác định", "Unknown");
 
     public int InstalledMemorySpeedMtps =>
         MemorySlots.Where(s => s.IsOccupied).Select(s => s.SpeedMtps).DefaultIfEmpty(0).Max();

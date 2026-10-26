@@ -27,7 +27,15 @@ bảng SMBIOS Type 8, cùng cổng SATA, header quạt và header USB trên bo. 
 nhiều màn thì mỗi thiết bị có mô hình riêng, đặt ngay cạnh dòng thông tin của thiết bị đó.
 Phần kết luận có cảnh lắp ráp tổng thể: CPU trong socket, RAM trong khe, card đồ hoạ trong
 khe PCIe, ổ M.2 trong khe M.2, ổ SATA nối cáp về bo, màn hình nối cáp về cổng xuất hình;
-cột mốc trên mỗi linh kiện tô màu theo mức đánh giá của nó.
+cột mốc trên mỗi linh kiện tô màu theo mức đánh giá của nó. Cạnh đó là thông tin nhanh của máy:
+model bo mạch, CPU, RAM, từng ổ, card đồ hoạ, kích thước và tần số quét từng màn.
+
+Màn hình nối qua bộ chuyển đổi (ví dụ màn VGA cắm qua chip DisplayPort→VGA) có thể bị nhận sai cổng;
+khi đó chọn tay "Cổng thật của màn hình" trong phần Màn hình, lựa chọn được ghi nhớ cho lần sau.
+
+Giao diện, kết quả phân tích, phát hiện firmware, nhật ký sự cố, kết quả chạy tải và biên bản HTML
+đều có hai ngôn ngữ Tiếng Việt / English. Đổi ngôn ngữ thì toàn bộ câu chữ đổi theo ngay,
+dựng lại từ dữ liệu đã thu nên không phải quét lại máy.
 
 | Linh kiện | Dữ liệu khai thác |
 |---|---|

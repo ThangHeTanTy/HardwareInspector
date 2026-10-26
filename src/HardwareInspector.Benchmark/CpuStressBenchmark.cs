@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using HardwareInspector.Core.Abstractions;
 using HardwareInspector.Core.Models;
+using static HardwareInspector.Core.Localization.Loc;
 
 namespace HardwareInspector.Benchmark;
 
@@ -19,7 +20,7 @@ public sealed class CpuStressBenchmark : IBenchmark
     public CpuStressBenchmark(TimeSpan? duration = null)
         => _duration = duration ?? TimeSpan.FromSeconds(60);
 
-    public string Name => "Tải nặng CPU toàn bộ nhân";
+    public string Name => S("Tải nặng CPU toàn bộ nhân", "All-core CPU stress");
     public ComponentKind Target => ComponentKind.Cpu;
     public TimeSpan EstimatedDuration => _duration;
 
@@ -59,17 +60,18 @@ public sealed class CpuStressBenchmark : IBenchmark
 
         var score = totalOps / Math.Max(sw.Elapsed.TotalSeconds, 0.001);
 
-        return new BenchmarkResult(
+        var seconds = sw.Elapsed.TotalSeconds;
+        return BenchmarkResult.Localized(() => new BenchmarkResult(
             Name,
-            "số nguyên tố/giây",
+            S("số nguyên tố/giây", "primes/s"),
             Math.Round(score, 1),
-            $"{threads} luồng chạy trong {sw.Elapsed.TotalSeconds:0} giây",
+            S($"{threads} luồng chạy trong {seconds:0} giây", $"{threads} threads for {seconds:0} s"),
             new Dictionary<string, string>
             {
                 ["Threads"] = threads.ToString(),
                 ["TotalPrimes"] = totalOps.ToString("N0"),
-                ["Seconds"] = sw.Elapsed.TotalSeconds.ToString("0.0")
-            });
+                ["Seconds"] = seconds.ToString("0.0")
+            }));
     }
 
     private static bool IsPrime(long n)

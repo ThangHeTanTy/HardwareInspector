@@ -5,12 +5,13 @@ using HardwareInspector.Core.Abstractions;
 using HardwareInspector.Core.Models;
 using HardwareInspector.Core.Models.Components;
 using Microsoft.Win32;
+using static HardwareInspector.Core.Localization.Loc;
 
 namespace HardwareInspector.Collectors.Components;
 
 public sealed class ProcessorCollector : IInfoCollector
 {
-    public string Name => "Bộ xử lý";
+    public string Name => S("Bộ xử lý", "Processor");
     public int Order => 10;
 
     public Task CollectAsync(SystemSnapshot snapshot, CancellationToken ct = default)
@@ -88,7 +89,7 @@ public sealed class ProcessorCollector : IInfoCollector
         5 => "ARM",
         9 => "x64",
         12 => "ARM64",
-        _ => "Không xác định"
+        _ => string.Empty
     };
 
     private static void ParseDescription(string description, ProcessorInfo cpu)

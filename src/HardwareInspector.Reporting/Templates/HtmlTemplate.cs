@@ -1,3 +1,5 @@
+using static HardwareInspector.Core.Localization.Loc;
+
 namespace HardwareInspector.Reporting.Exporters;
 
 /// <summary>Khung HTML và CSS cho báo cáo. Tách riêng để dễ chỉnh giao diện.</summary>
@@ -34,11 +36,11 @@ internal static class HtmlTemplate
 
     public static string Head(string title) => $$"""
         <!DOCTYPE html>
-        <html lang="vi">
+        <html lang="{{S("vi", "en")}}">
         <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Biên bản kiểm tra — {{System.Net.WebUtility.HtmlEncode(title)}}</title>
+        <title>{{S("Biên bản kiểm tra", "Inspection report")}} — {{System.Net.WebUtility.HtmlEncode(title)}}</title>
         <style>
           :root {
             --bg: #0F1115; --panel: #171A21; --line: #262A33;
@@ -122,10 +124,12 @@ internal static class HtmlTemplate
         <body>
         """;
 
-    public static string Foot() => """
+    public static string Foot() => $"""
         <footer>
-          Báo cáo do Hardware Inspector tạo tự động. Các phát hiện được đánh dấu là suy đoán
-          cần đối chiếu thêm bằng kiểm tra thủ công trước khi kết luận.
+          {S("Báo cáo do Hardware Inspector tạo tự động. Các phát hiện được đánh dấu là suy đoán " +
+             "cần đối chiếu thêm bằng kiểm tra thủ công trước khi kết luận.",
+             "Report generated automatically by Hardware Inspector. Findings marked as inferences " +
+             "should be cross-checked manually before drawing conclusions.")}
         </footer>
         </body>
         </html>

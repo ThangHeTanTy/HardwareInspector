@@ -5,6 +5,7 @@ using HardwareInspector.Core.Abstractions;
 using HardwareInspector.Core.Models;
 using HardwareInspector.Core.Models.Components;
 using Microsoft.Win32;
+using static HardwareInspector.Core.Localization.Loc;
 
 namespace HardwareInspector.Collectors.Components;
 
@@ -18,7 +19,7 @@ namespace HardwareInspector.Collectors.Components;
 /// </summary>
 public sealed class DisplayCollector : IInfoCollector
 {
-    public string Name => "Màn hình";
+    public string Name => S("Màn hình", "Displays");
     public int Order => 60;
 
     // Duyệt từng cổng xuất hình rồi đọc EDID của mỗi màn.
@@ -264,7 +265,6 @@ public sealed class DisplayCollector : IInfoCollector
         var display = new DisplayInfo
         {
             AdapterDeviceName = @"\\.\DISPLAY1",
-            FriendlyName = "Màn hình mặc định",
             IsPrimary = true,
             IsActive = true
         };

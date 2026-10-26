@@ -35,7 +35,7 @@ public sealed class CpuIdSignature
 
 public sealed class ProcessorInfo
 {
-    public string Name { get; set; } = "Không xác định";
+    public string Name { get; set; } = string.Empty;
     public string Manufacturer { get; set; } = string.Empty;
     public string Socket { get; set; } = string.Empty;
     public string Architecture { get; set; } = string.Empty;

@@ -8,6 +8,7 @@ using HardwareInspector.Core.Models.Diagnostics;
 using HardwareInspector.Firmware;
 using HardwareInspector.Firmware.Upgrade;
 using HardwareInspector.Sensors;
+using static HardwareInspector.Core.Localization.Loc;
 
 namespace HardwareInspector.App.Services;
 
@@ -31,6 +32,9 @@ public sealed class InspectionPipeline : IDisposable
     /// hay driver sập là sự thật về phần cứng, không mất đi khi máy nguội.
     /// </summary>
     public GpuTestResult? LastGpuTest { get; set; }
+
+    /// <summary>Các bước không hoàn tất ở lượt quét gần nhất, giữ lại để dựng lại câu báo lỗi khi đổi ngôn ngữ.</summary>
+    private readonly List<(IInfoCollector Collector, string Message)> _failures = new();
 
     /// <summary>Chỉnh ảnh chụp trước khi chấm điểm — dùng để áp lựa chọn tay của người dùng.</summary>
     public Action<SystemSnapshot>? BeforeAnalysis { get; set; }
@@ -65,6 +69,7 @@ public sealed class InspectionPipeline : IDisposable
         IProgress<InspectionProgress>? progress = null, CancellationToken ct = default)
     {
         var snapshot = new SystemSnapshot { GpuTest = LastGpuTest };
+        _failures.Clear();
 
         // Bước phân tích cuối cũng chiếm thời gian nên tính luôn vào tổng trọng số,
         // nếu không thanh tiến độ sẽ nhảy tới 100% rồi mới đứng chờ.
@@ -93,14 +98,8 @@ public sealed class InspectionPipeline : IDisposable
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                snapshot.ReliabilityFindings.Add(new Finding
-                {
-                    Code = "PIPE-ERR",
-                    Component = ComponentKind.Motherboard,
-                    Severity = Severity.Info,
-                    Title = $"Bước \"{collector.Name}\" không hoàn tất",
-                    Detail = ex.Message
-                });
+                _failures.Add((collector, ex.Message));
+                snapshot.ReliabilityFindings.Add(FailureFinding(collector, ex.Message));
             }
 
             doneWeight += collector.Weight;
@@ -108,14 +107,40 @@ public sealed class InspectionPipeline : IDisposable
         }
 
         ct.ThrowIfCancellationRequested();
-        Report("Phân tích và chấm điểm", doneWeight);
+        Report(S("Phân tích và chấm điểm", "Analysing and scoring"), doneWeight);
         BeforeAnalysis?.Invoke(snapshot);
 
         var assessment = await Task.Run(() => _assessmentService.Assess(snapshot), ct);
 
-        Report("Hoàn tất", totalWeight);
+        Report(S("Hoàn tất", "Done"), totalWeight);
         return (snapshot, assessment);
     }
+
+    /// <summary>
+    /// Dựng lại câu chữ sinh lúc quét theo ngôn ngữ đang chọn: phát hiện firmware, nhật ký sự cố
+    /// và các bước không hoàn tất. Chỉ đọc dữ liệu đã thu, không đụng phần cứng.
+    /// </summary>
+    public void Relocalize(SystemSnapshot snapshot)
+    {
+        foreach (var collector in _collectors.OfType<IRelocalizable>())
+        {
+            try { collector.Relocalize(snapshot); }
+            catch { }
+        }
+
+        snapshot.ReliabilityFindings.RemoveAll(f => f.Code == "PIPE-ERR");
+        foreach (var (collector, message) in _failures)
+            snapshot.ReliabilityFindings.Add(FailureFinding(collector, message));
+    }
+
+    private static Finding FailureFinding(IInfoCollector collector, string message) => new()
+    {
+        Code = "PIPE-ERR",
+        Component = ComponentKind.Motherboard,
+        Severity = Severity.Info,
+        Title = S($"Bước \"{collector.Name}\" không hoàn tất", $"Step \"{collector.Name}\" did not complete"),
+        Detail = message
+    };
 
     public void Dispose() => SensorMonitor.Dispose();
 }

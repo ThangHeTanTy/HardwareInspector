@@ -84,6 +84,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             // Gán Loc.Current phát sự kiện, mọi thực thể UiStrings tự làm mới binding.
             Loc.Current = value.Language;
             RebuildLocalizedContent();
+
+            var results = BenchmarkResults.Select(r => r.Rebuild?.Invoke() ?? r).ToList();
+            BenchmarkResults.Clear();
+            foreach (var r in results) BenchmarkResults.Add(r);
             if (_snapshot is { } snapshot) RefreshPortChoices(snapshot);
         }
     }
@@ -96,6 +100,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
+        _pipeline.Relocalize(_snapshot);
         var assessment = _assessmentService.Assess(_snapshot);
         Assessment = assessment;
 
@@ -368,7 +373,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         return facts;
     }
     public string OverallScoreText => _assessment is null ? "—" : _assessment.OverallScore.ToString();
-    public string OverallRatingText => _assessment?.OverallRating.ToText() ?? "Chưa kiểm tra";
+    public string OverallRatingText => _assessment?.OverallRating.ToText() ?? Ui["Verdict.NotChecked"];
     public string OverallColor => _assessment?.OverallRating.ToHexColor() ?? "#8A8F98";
 
     public string TrustLevelText => _assessment is null
@@ -377,7 +382,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public string TrustVerdict => _assessment?.Trust.Verdict ?? string.Empty;
 
-    public string FirmwareStatusText => _assessment?.Firmware.Status.ToText() ?? "Chưa kiểm tra";
+    public string FirmwareStatusText => _assessment?.Firmware.Status.ToText() ?? Ui["Verdict.NotChecked"];
 
     public string FirmwareColor => _assessment?.Firmware.Status switch
     {

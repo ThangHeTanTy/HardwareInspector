@@ -41,12 +41,14 @@ public sealed class WarrantyLookupService
         {
             Component = ComponentKind.Motherboard,
             ComponentName = $"{vendor} {b.SystemProductName}".Trim(),
-            Vendor = string.IsNullOrWhiteSpace(vendor) ? "Không xác định" : vendor,
+            Vendor = string.IsNullOrWhiteSpace(vendor) ? S("Không xác định", "Unknown") : vendor,
             Serial = serial,
             Url = url,
             Note = note ?? (serial is null
-                ? "Firmware không có serial hợp lệ. Đây đã là một dấu hiệu cần làm rõ — hãy lấy serial từ tem đáy máy."
-                : "Đối chiếu model mà trang bảo hành trả về với máy đang cầm. Lệch model nghĩa là serial không thuộc máy này.")
+                ? S("Firmware không có serial hợp lệ. Đây đã là một dấu hiệu cần làm rõ — hãy lấy serial từ tem đáy máy.",
+                    "The firmware has no valid serial. That alone needs explaining — take the serial from the label under the machine.")
+                : S("Đối chiếu model mà trang bảo hành trả về với máy đang cầm. Lệch model nghĩa là serial không thuộc máy này.",
+                    "Compare the model the warranty site returns with the machine in your hands. A different model means the serial is not this machine's."))
         });
     }
 
@@ -58,48 +60,60 @@ public sealed class WarrantyLookupService
             return (serial is null
                     ? "https://www.dell.com/support/home/en-us"
                     : $"https://www.dell.com/support/home/en-us/product-support/servicetag/{Uri.EscapeDataString(serial)}/overview",
-                "Dell gọi serial là Service Tag, gồm 7 ký tự. Trang này cho biết ngày hết hạn bảo hành và cấu hình xuất xưởng — " +
-                "hãy so cấu hình đó với cấu hình phần mềm đọc được.");
+                S("Dell gọi serial là Service Tag, gồm 7 ký tự. Trang này cho biết ngày hết hạn bảo hành và cấu hình xuất xưởng — " +
+                  "hãy so cấu hình đó với cấu hình phần mềm đọc được.",
+                  "Dell calls the serial a Service Tag, 7 characters long. The page shows the warranty end date and factory configuration — " +
+                  "compare that configuration with what this app reads."));
 
         if (v.Contains("lenovo") || v.Contains("thinkpad"))
             return (serial is null
                     ? "https://pcsupport.lenovo.com/warrantylookup"
                     : $"https://pcsupport.lenovo.com/products/{Uri.EscapeDataString(serial)}",
-                "Lenovo hiển thị cả ngày xuất xưởng. Ngày này là mốc chuẩn để đối chiếu với " +
-                "ngày phát hành BIOS và năm sản xuất tấm nền.");
+                S("Lenovo hiển thị cả ngày xuất xưởng. Ngày này là mốc chuẩn để đối chiếu với " +
+                  "ngày phát hành BIOS và năm sản xuất tấm nền.",
+                  "Lenovo also shows the ship date. It is the reference point to compare with " +
+                  "the BIOS release date and the panel's manufacture year."));
 
         if (v.Contains("hp") || v.Contains("hewlett") || v.Contains("compaq"))
             return ("https://support.hp.com/us-en/checkwarranty",
-                "HP yêu cầu nhập serial thủ công kèm mã captcha nên không điền sẵn được. " +
-                "Serial đã được sao vào clipboard khi bạn bấm mở.");
+                S("HP yêu cầu nhập serial thủ công kèm mã captcha nên không điền sẵn được. " +
+                  "Serial đã được sao vào clipboard khi bạn bấm mở.",
+                  "HP requires typing the serial with a captcha, so it cannot be pre-filled. " +
+                  "The serial is copied to the clipboard when you click to open."));
 
         if (v.Contains("asus"))
             return ("https://www.asus.com/support/warranty-status-inquiry/",
-                "ASUS cần cả serial và model. Trang cũng cho biết máy thuộc thị trường nào — " +
-                "máy xách tay từ thị trường khác thường không được bảo hành trong nước.");
+                S("ASUS cần cả serial và model. Trang cũng cho biết máy thuộc thị trường nào — " +
+                  "máy xách tay từ thị trường khác thường không được bảo hành trong nước.",
+                  "ASUS needs both serial and model. The page also shows which market the machine belongs to — " +
+                  "grey imports from other markets usually have no local warranty."));
 
         if (v.Contains("acer"))
             return ("https://www.acer.com/support/product-registration",
-                "Acer tra theo SNID hoặc serial. SNID là dãy số ngắn hơn nằm cạnh serial trên tem.");
+                S("Acer tra theo SNID hoặc serial. SNID là dãy số ngắn hơn nằm cạnh serial trên tem.",
+                  "Acer looks up by SNID or serial. The SNID is the shorter number next to the serial on the label."));
 
         if (v.Contains("msi") || v.Contains("micro-star"))
             return ("https://account.msi.com/login?redirect=warranty",
-                "MSI yêu cầu đăng nhập tài khoản để tra bảo hành.");
+                S("MSI yêu cầu đăng nhập tài khoản để tra bảo hành.", "MSI requires signing in to check warranty."));
 
         if (v.Contains("apple"))
             return ("https://checkcoverage.apple.com/",
-                "Apple hiển thị cả tình trạng khoá kích hoạt. Với máy Mac cũ, đây là mục quan trọng nhất cần kiểm tra.");
+                S("Apple hiển thị cả tình trạng khoá kích hoạt. Với máy Mac cũ, đây là mục quan trọng nhất cần kiểm tra.",
+                  "Apple also shows the activation lock status. On a used Mac this is the most important thing to check."));
 
         if (v.Contains("microsoft"))
             return ("https://mysupport.microsoft.com/devices",
-                "Surface tra theo serial in ở chân chống hoặc dưới bàn phím.");
+                S("Surface tra theo serial in ở chân chống hoặc dưới bàn phím.", "Surface devices look up by the serial printed under the kickstand or keyboard."));
 
         if (v.Contains("gigabyte") || v.Contains("aorus"))
             return ("https://www.gigabyte.com/Support/Consumer/WarrantyList", null);
 
         return (null,
-            "Chưa có sẵn liên kết cho hãng này. Tra thủ công bằng cụm từ " +
-            $"\"{vendor} warranty check serial\" trên trang chủ của hãng.");
+            S("Chưa có sẵn liên kết cho hãng này. Tra thủ công bằng cụm từ " +
+              $"\"{vendor} warranty check serial\" trên trang chủ của hãng.",
+              "No ready-made link for this manufacturer. Search manually for " +
+              $"\"{vendor} warranty check serial\" on the manufacturer's site."));
     }
 
     // ------------------------------------------------------------------
@@ -118,9 +132,11 @@ public sealed class WarrantyLookupService
                 Serial = serial,
                 Url = url,
                 Note = d.PowerOnHours is { } hours
-                    ? $"Ổ đã chạy {hours:N0} giờ. Bảo hành SSD thường hết hiệu lực khi vượt hạn mức TBW " +
-                      $"kể cả còn trong thời hạn{(d.TeraBytesWritten is { } tbw ? $" — ổ này đã ghi {tbw:0.#} TB" : string.Empty)}."
-                    : "Đối chiếu ngày sản xuất mà trang bảo hành trả về với tuổi máy."
+                    ? S($"Ổ đã chạy {hours:N0} giờ. Bảo hành SSD thường hết hiệu lực khi vượt hạn mức TBW " +
+                        $"kể cả còn trong thời hạn{(d.TeraBytesWritten is { } tbw ? $" — ổ này đã ghi {tbw:0.#} TB" : string.Empty)}.",
+                        $"The drive has run {hours:N0} hours. SSD warranties usually end once the TBW rating is exceeded, " +
+                        $"even within the warranty period{(d.TeraBytesWritten is { } tbw2 ? $" — this drive has written {tbw2:0.#} TB" : string.Empty)}.")
+                    : S("Đối chiếu ngày sản xuất mà trang bảo hành trả về với tuổi máy.", "Compare the manufacture date the warranty site returns with the machine's age.")
             });
         }
     }
@@ -143,7 +159,7 @@ public sealed class WarrantyLookupService
         if (m.Contains("ADATA")) return ("ADATA", "https://www.adata.com/en/support/warranty/");
         if (m.Contains("LEXAR")) return ("Lexar", "https://www.lexar.com/support/");
 
-        return (model.Split(' ').FirstOrDefault() ?? "Không xác định", null);
+        return (model.Split(' ').FirstOrDefault() ?? S("Không xác định", "Unknown"), null);
     }
 
     // ------------------------------------------------------------------
@@ -153,7 +169,8 @@ public sealed class WarrantyLookupService
         {
             var serial = FormatHelpers.IsPlaceholder(d.SerialNumber) ? null : d.SerialNumber.Trim();
             var made = d.ManufactureYear is { } y
-                ? $"Tấm nền sản xuất {(d.ManufactureWeek is { } w ? $"tuần {w}/" : string.Empty)}{y}. "
+                ? S($"Tấm nền sản xuất {(d.ManufactureWeek is { } w ? $"tuần {w}/" : string.Empty)}{y}. ",
+                    $"Panel made {(d.ManufactureWeek is { } w2 ? $"week {w2}/" : "in ")}{y}. ")
                 : string.Empty;
 
             results.Add(new WarrantyLookup
@@ -163,8 +180,10 @@ public sealed class WarrantyLookupService
                 Vendor = d.ManufacturerName,
                 Serial = serial,
                 Url = null,
-                Note = made + "Bảo hành màn hình rời tính từ ngày mua chứ không phải ngày sản xuất, " +
-                       "nhưng ngày sản xuất cho biết màn đã nằm kho bao lâu trước khi tới tay người dùng đầu tiên."
+                Note = made + S("Bảo hành màn hình rời tính từ ngày mua chứ không phải ngày sản xuất, " +
+                                "nhưng ngày sản xuất cho biết màn đã nằm kho bao lâu trước khi tới tay người dùng đầu tiên.",
+                                "Monitor warranties run from the purchase date, not the manufacture date, " +
+                                "but the manufacture date tells you how long it sat in stock before its first owner.")
             });
         }
     }
@@ -177,13 +196,16 @@ public sealed class WarrantyLookupService
         {
             Component = ComponentKind.Battery,
             ComponentName = $"{battery.Manufacturer} {battery.Name}".Trim(),
-            Vendor = string.IsNullOrWhiteSpace(battery.Manufacturer) ? "Không xác định" : battery.Manufacturer,
+            Vendor = string.IsNullOrWhiteSpace(battery.Manufacturer) ? S("Không xác định", "Unknown") : battery.Manufacturer,
             Serial = FormatHelpers.IsPlaceholder(battery.SerialNumber) ? null : battery.SerialNumber,
             Url = null,
             Note = battery.ManufactureDate is { } made
-                ? $"Pin sản xuất {made:dd/MM/yyyy}. Hầu hết hãng chỉ bảo hành pin 6-12 tháng, " +
-                  "ngắn hơn nhiều so với bảo hành máy."
-                : "Pin thường có thời hạn bảo hành riêng, ngắn hơn bảo hành máy. Hỏi rõ điểm này khi mua."
+                ? S($"Pin sản xuất {made:dd/MM/yyyy}. Hầu hết hãng chỉ bảo hành pin 6-12 tháng, " +
+                    "ngắn hơn nhiều so với bảo hành máy.",
+                    $"Battery made {made:dd/MM/yyyy}. Most manufacturers only cover batteries for 6-12 months, " +
+                    "much shorter than the machine's warranty.")
+                : S("Pin thường có thời hạn bảo hành riêng, ngắn hơn bảo hành máy. Hỏi rõ điểm này khi mua.",
+                    "Batteries usually have their own, shorter warranty than the machine. Ask about it when buying.")
         });
     }
 
@@ -199,8 +221,10 @@ public sealed class WarrantyLookupService
             Vendor = gpu.Vendor,
             Serial = null,
             Url = null,
-            Note = "Card rời không phơi bày serial qua phần mềm. Serial nằm trên tem dán ở thân card — " +
-                   "tem bị bóc hoặc rách là dấu hiệu card đã mất bảo hành, thường do từng được tháo tản nhiệt."
+            Note = S("Card rời không phơi bày serial qua phần mềm. Serial nằm trên tem dán ở thân card — " +
+                     "tem bị bóc hoặc rách là dấu hiệu card đã mất bảo hành, thường do từng được tháo tản nhiệt.",
+                     "Discrete cards do not expose their serial to software. It is on a sticker on the card — " +
+                     "a peeled or torn sticker means the warranty is void, usually because the cooler was removed.")
         });
     }
 }

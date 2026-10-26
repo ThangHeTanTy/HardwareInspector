@@ -36,10 +36,12 @@ public sealed class HtmlReportExporter : IReportExporter
               <div class="brand">
                 {HtmlTemplate.LogoSvg}
               </div>
-              <p class="eyebrow">Biên bản kiểm tra phần cứng</p>
+              <p class="eyebrow">{S("Biên bản kiểm tra phần cứng", "Hardware inspection report")}</p>
               <h1>{E(a.MachineTitle)}</h1>
-              <p class="meta">Lập lúc {a.GeneratedAtLocal:HH:mm dd/MM/yyyy} · {E(snapshot.OperatingSystem.Caption)}
-              {(snapshot.Firmware.RanWithAdminRights ? "· chạy với quyền Administrator" : "· <strong>chưa chạy quyền Administrator</strong>")}</p>
+              <p class="meta">{S("Lập lúc", "Generated")} {a.GeneratedAtLocal:HH:mm dd/MM/yyyy} · {E(snapshot.OperatingSystem.Caption)}
+              {(snapshot.Firmware.RanWithAdminRights
+                  ? S("· chạy với quyền Administrator", "· run with Administrator rights")
+                  : S("· <strong>chưa chạy quyền Administrator</strong>", "· <strong>not run as Administrator</strong>"))}</p>
             </header>
 
             <section class="verdict">
@@ -49,16 +51,19 @@ public sealed class HtmlReportExporter : IReportExporter
               </div>
               <div class="verdict-text">
                 <p>{E(a.Summary)}</p>
-                <p class="trust"><strong>Mức tin cậy khi mua lại:</strong> {E(a.Trust.Level.ToText())} ({a.Trust.TrustScore}/100)</p>
+                <p class="trust"><strong>{S("Mức tin cậy khi mua lại:", "Second-hand trust level:")}</strong> {E(a.Trust.Level.ToText())} ({a.Trust.TrustScore}/100)</p>
                 <p>{E(a.Trust.Verdict)}</p>
               </div>
             </section>
             """);
 
         // Bảng tổng hợp linh kiện
-        sb.Append("<section><h2>Tổng quan từng linh kiện</h2><table class=\"summary\"><thead><tr>" +
-                  "<th>Linh kiện</th><th>Tên</th><th>Đánh giá</th><th>Điểm</th><th>Thời gian hoạt động</th><th>Sức khoẻ</th>" +
-                  "</tr></thead><tbody>");
+        sb.Append(S("<section><h2>Tổng quan từng linh kiện</h2><table class=\"summary\"><thead><tr>" +
+                    "<th>Linh kiện</th><th>Tên</th><th>Đánh giá</th><th>Điểm</th><th>Thời gian hoạt động</th><th>Sức khoẻ</th>" +
+                    "</tr></thead><tbody>",
+                    "<section><h2>Component overview</h2><table class=\"summary\"><thead><tr>" +
+                    "<th>Component</th><th>Name</th><th>Rating</th><th>Score</th><th>Operating time</th><th>Health</th>" +
+                    "</tr></thead><tbody>"));
 
         foreach (var c in a.Components)
         {
@@ -78,7 +83,7 @@ public sealed class HtmlReportExporter : IReportExporter
         // Cảnh báo firmware
         sb.Append($"""
             <section class="firmware">
-              <h2>BIOS và chuỗi khởi động</h2>
+              <h2>{S("BIOS và chuỗi khởi động", "BIOS and boot chain")}</h2>
               <p class="status" style="--c:{StatusColor(snapshot.Firmware.Status)}">
                 {E(snapshot.Firmware.Status.ToText())}
               </p>
@@ -111,7 +116,7 @@ public sealed class HtmlReportExporter : IReportExporter
                               $"<strong>{E(f.Title)}</strong>");
                     if (!string.IsNullOrWhiteSpace(f.Detail)) sb.Append($"<p>{E(f.Detail!)}</p>");
                     if (!string.IsNullOrWhiteSpace(f.Recommendation))
-                        sb.Append($"<p class=\"rec\">Nên làm: {E(f.Recommendation!)}</p>");
+                        sb.Append($"<p class=\"rec\">{S("Nên làm:", "What to do:")} {E(f.Recommendation!)}</p>");
                     sb.Append("</li>");
                 }
                 sb.Append("</ul>");
@@ -121,7 +126,8 @@ public sealed class HtmlReportExporter : IReportExporter
         }
 
         // Đối chiếu chéo
-        sb.Append("<section><h2>Đối chiếu chéo giữa các nguồn dữ liệu</h2><ul class=\"crosschecks\">");
+        sb.Append(S("<section><h2>Đối chiếu chéo giữa các nguồn dữ liệu</h2><ul class=\"crosschecks\">",
+                    "<section><h2>Cross-checks between data sources</h2><ul class=\"crosschecks\">"));
         foreach (var cc in a.Trust.CrossChecks)
             sb.Append($"<li class=\"{(cc.Passed ? "pass" : "fail")}\"><strong>{E(cc.Name)}</strong>" +
                       $"<p>{E(cc.Explanation)}</p></li>");
@@ -130,15 +136,18 @@ public sealed class HtmlReportExporter : IReportExporter
         // Tra bảo hành
         if (a.WarrantyLookups.Count > 0)
         {
-            sb.Append("<section><h2>Đầu mối tra bảo hành</h2><table class=\"summary\"><thead><tr>" +
-                      "<th>Linh kiện</th><th>Hãng</th><th>Serial</th><th>Ghi chú</th>" +
-                      "</tr></thead><tbody>");
+            sb.Append(S("<section><h2>Đầu mối tra bảo hành</h2><table class=\"summary\"><thead><tr>" +
+                        "<th>Linh kiện</th><th>Hãng</th><th>Serial</th><th>Ghi chú</th>" +
+                        "</tr></thead><tbody>",
+                        "<section><h2>Warranty lookups</h2><table class=\"summary\"><thead><tr>" +
+                        "<th>Component</th><th>Vendor</th><th>Serial</th><th>Note</th>" +
+                        "</tr></thead><tbody>"));
 
             foreach (var w in a.WarrantyLookups)
             {
                 var serialCell = w.HasSerial
                     ? $"<code>{E(w.Serial)}</code>"
-                    : "<span class=\"muted\">không đọc được</span>";
+                    : S("<span class=\"muted\">không đọc được</span>", "<span class=\"muted\">not readable</span>");
                 var vendorCell = string.IsNullOrWhiteSpace(w.Url)
                     ? E(w.Vendor)
                     : $"<a href=\"{E(w.Url)}\">{E(w.Vendor)}</a>";
@@ -151,10 +160,14 @@ public sealed class HtmlReportExporter : IReportExporter
         }
 
         // Checklist thủ công
-        sb.Append("<section><h2>Việc cần kiểm tra bằng tay</h2>" +
-                  "<p class=\"intro\">Những mục dưới đây phần mềm không thay thế được. " +
-                  "Hãy làm đủ trước khi trả tiền. Công cụ gợi ý đều dẫn tới trang chính thức của nhà phát triển — " +
-                  "đừng tải từ trang trung gian.</p><ol class=\"checklist\">");
+        sb.Append(S("<section><h2>Việc cần kiểm tra bằng tay</h2>" +
+                    "<p class=\"intro\">Những mục dưới đây phần mềm không thay thế được. " +
+                    "Hãy làm đủ trước khi trả tiền. Công cụ gợi ý đều dẫn tới trang chính thức của nhà phát triển — " +
+                    "đừng tải từ trang trung gian.</p><ol class=\"checklist\">",
+                    "<section><h2>Manual checks</h2>" +
+                    "<p class=\"intro\">Software cannot replace the items below. " +
+                    "Do all of them before paying. Suggested tools link to the developers' official pages — " +
+                    "do not download from third-party sites.</p><ol class=\"checklist\">"));
         foreach (var item in a.Trust.ManualChecklist)
         {
             sb.Append($"<li>{E(item.Text)}");
