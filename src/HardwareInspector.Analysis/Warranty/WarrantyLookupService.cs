@@ -45,8 +45,11 @@ public sealed class WarrantyLookupService
             Serial = serial,
             Url = url,
             Note = note ?? (serial is null
-                ? S("Firmware không có serial hợp lệ. Đây đã là một dấu hiệu cần làm rõ — hãy lấy serial từ tem đáy máy.",
-                    "The firmware has no valid serial. That alone needs explaining — take the serial from the label under the machine.")
+                ? snapshot.IsLaptop
+                    ? S("Không đọc được serial máy — hãy lấy serial từ tem đáy máy.",
+                        "No system serial could be read — take the serial from the label under the machine.")
+                    : S("Máy tự ráp thường không có serial hệ thống, chuyện này bình thường. Bảo hành bo mạch tra theo serial in trên tem bo hoặc hộp.",
+                        "Self-built PCs usually have no system serial; that is normal. Board warranty goes by the serial on the board's sticker or box.")
                 : S("Đối chiếu model mà trang bảo hành trả về với máy đang cầm. Lệch model nghĩa là serial không thuộc máy này.",
                     "Compare the model the warranty site returns with the machine in your hands. A different model means the serial is not this machine's."))
         });
@@ -70,9 +73,9 @@ public sealed class WarrantyLookupService
                     ? "https://pcsupport.lenovo.com/warrantylookup"
                     : $"https://pcsupport.lenovo.com/products/{Uri.EscapeDataString(serial)}",
                 S("Lenovo hiển thị cả ngày xuất xưởng. Ngày này là mốc chuẩn để đối chiếu với " +
-                  "ngày phát hành BIOS và năm sản xuất tấm nền.",
+                  "ngày sản xuất pin và năm sản xuất tấm nền.",
                   "Lenovo also shows the ship date. It is the reference point to compare with " +
-                  "the BIOS release date and the panel's manufacture year."));
+                  "the battery's manufacture date and the panel's manufacture year."));
 
         if (v.Contains("hp") || v.Contains("hewlett") || v.Contains("compaq"))
             return ("https://support.hp.com/us-en/checkwarranty",

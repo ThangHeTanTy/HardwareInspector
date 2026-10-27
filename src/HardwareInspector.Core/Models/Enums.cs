@@ -10,6 +10,11 @@ public enum ComponentKind
     Battery,
     Display,
     Motherboard,
+
+    /// <summary>
+    /// Không còn được chấm điểm: BIOS đi kèm bo mạch do hãng cung cấp nên không dùng làm
+    /// tiêu chí. Giữ lại để giá trị số của các mục phía sau không đổi trong dữ liệu đã lưu.
+    /// </summary>
     Firmware,
     Cooling,
     OperatingSystem,
@@ -44,15 +49,6 @@ public enum TrustLevel
     Suspicious = 2,   // Cần kiểm tra tay / mặc cả
     Acceptable = 3,   // Chấp nhận được
     Trustworthy = 4   // Đáng tin
-}
-
-public enum IntegrityStatus
-{
-    Unknown = 0,
-    Compromised = 1,   // Có bằng chứng can thiệp
-    Suspicious = 2,    // Dấu hiệu bất thường
-    Unverified = 3,    // Không đủ quyền / thiếu dữ liệu để kết luận
-    Clean = 4
 }
 
 public enum SensorKind

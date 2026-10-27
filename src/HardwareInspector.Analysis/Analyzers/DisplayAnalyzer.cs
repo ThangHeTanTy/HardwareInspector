@@ -88,7 +88,7 @@ public sealed class DisplayAnalyzer : IComponentAnalyzer
                 .MetricIf(display.BitsPerColor.HasValue, S("Độ sâu màu tấm nền", "Panel colour depth"), S($"{display.BitsPerColor} bit/kênh", $"{display.BitsPerColor} bit/channel"))
                 .Metric(S("Serial màn hình", "Display serial"), FormatHelpers.Mask(display.SerialNumber));
 
-            AnalyzeAge(card, display, snapshot);
+            AnalyzeAge(card, display);
             AnalyzeMode(card, display);
 
             if (display.BitsPerColor is 6)
@@ -128,7 +128,7 @@ public sealed class DisplayAnalyzer : IComponentAnalyzer
             : null;
     }
 
-    private void AnalyzeAge(ScoreCard card, DisplayInfo display, SystemSnapshot snapshot)
+    private static void AnalyzeAge(ScoreCard card, DisplayInfo display)
     {
         if (display.ManufactureYear is not { } year) return;
 
@@ -136,35 +136,6 @@ public sealed class DisplayAnalyzer : IComponentAnalyzer
         var age = DateTime.Now.Year - year;
         card.Metric(S("Ngày sản xuất tấm nền", "Panel manufacture date"), $"{weekText}{year}", S($"Khoảng {age} năm tuổi", $"About {age} years old"));
         card.Uptime(TimeSpan.FromDays(age * 365.0));
-
-        // Phép đối chiếu chỉ có ý nghĩa với tấm nền tích hợp: màn rời vốn được mua
-        // rời khỏi máy nên lệch tuổi là chuyện bình thường.
-        if (!display.IsInternal) return;
-        if (snapshot.Bios.ReleaseDate is not { } biosDate) return;
-
-        var gap = year - biosDate.Year;
-
-        if (gap >= 2)
-            card.Add("DSP-SWAP-001", Kind, Severity.Warning,
-                S($"Tấm nền sản xuất năm {year}, sau ngày phát hành BIOS ({biosDate:MM/yyyy}) {gap} năm",
-                  $"Panel made in {year}, {gap} years after the BIOS release ({biosDate:MM/yyyy})"),
-                S("Chênh lệch này cho thấy màn hình nhiều khả năng đã được thay. " +
-                  "Bản thân việc thay màn không xấu — nhưng nó cho biết máy từng bị va đập hoặc hỏng, " +
-                  "và tấm nền thay thế có thể không cùng chất lượng với tấm nguyên bản.",
-                  "This gap suggests the screen has most likely been replaced. " +
-                  "A replacement is not bad in itself — but it tells you the machine was damaged at some point, " +
-                  "and the replacement panel may not match the original's quality."),
-                S("Hỏi thẳng người bán về lịch sử sửa chữa. Kiểm tra ốc vỏ và viền màn có dấu tháo lắp không.",
-                  "Ask the seller directly about repairs. Check the case screws and screen bezel for signs of disassembly."),
-                penalty: 12, confidence: 0.7, source: EvidenceSource.Edid);
-        else if (gap <= -3)
-            card.Add("DSP-SWAP-002", Kind, Severity.Notice,
-                S($"Tấm nền sản xuất năm {year}, trước BIOS ({biosDate:MM/yyyy}) {-gap} năm",
-                  $"Panel made in {year}, {-gap} years before the BIOS ({biosDate:MM/yyyy})"),
-                S("Tấm nền cũ hơn máy đáng kể. Có thể là tấm nền tháo từ máy khác sang.",
-                  "The panel is much older than the machine. It may have been taken from another machine."),
-                S("Kiểm tra kỹ tình trạng hiển thị và dấu vết tháo lắp.", "Check the picture quality and look for signs of disassembly."),
-                penalty: 8, confidence: 0.5, source: EvidenceSource.Edid);
     }
 
     /// <summary>

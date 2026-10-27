@@ -39,7 +39,7 @@ chứ không phải ở `Collectors/Native`.
 | `Core` | Model dữ liệu, enum, interface, tiện ích format, bảng tra vi kiến trúc CPU | Gọi WMI, đọc registry, chạm UI |
 | `Collectors` | Đọc dữ liệu thô: WMI, registry, S.M.A.R.T., EDID, Event Log | Đánh giá, chấm điểm |
 | `Sensors` | Đo nhiệt độ, xung nhịp, quạt qua LibreHardwareMonitor | Kết luận về sức khoẻ |
-| `Firmware` | SMBIOS thô, bảng ACPI, biến UEFI, TPM, quét ESP | Chấm điểm linh kiện khác |
+| `Firmware` | SMBIOS thô: khe RAM, khe mở rộng, cổng, RAM tối đa | Chấm điểm linh kiện khác |
 | `Analysis` | Biến dữ liệu thô thành đánh giá, điểm số, cảnh báo, kết luận tin cậy | Đọc dữ liệu trực tiếp từ hệ thống |
 | `Benchmark` | Tạo tải để bộc lộ vấn đề nhiệt; ghi lại dữ kiện thô của bài GPU (`GpuTestResult`) | Đánh giá kết quả |
 | `Reporting` | Xuất HTML và JSON | Thu thập hay phân tích |
@@ -62,7 +62,6 @@ InspectionPipeline.RunAsync()
    ├─ 6. BatteryCollector        → ghép 3 nguồn WMI để có chu kỳ + độ chai
    ├─ 7. DisplayCollector        → EDID thô từ registry, tự parse
    ├─ 8. ReliabilityScanner      → WHEA, disk error, bugcheck 90 ngày
-   ├─ 9. FirmwareIntegrityService→ chạy 8 phép kiểm tra firmware
    └─ 10. SensorSnapshotCollector→ chốt min/max/avg của phiên đo
    │
    ▼
@@ -79,12 +78,7 @@ MachineAssessmentService.Assess()
 MachineAssessment  (thứ giao diện và báo cáo tiêu thụ)
 ```
 
-## Thêm một phép kiểm tra firmware mới
-
-1. Tạo lớp trong `Firmware/Checks/` cài `IFirmwareCheck`.
-2. Đăng ký vào danh sách trong `FirmwareIntegrityService`.
-3. Đặt `RequiresAdmin = true` nếu cần quyền — service sẽ tự bỏ qua khi thiếu quyền
-   và trạng thái tổng sẽ là `Unverified` thay vì `Clean`.
+## Mức độ chắc chắn
 
 Đặt `Confidence` trung thực. Đây là điều quan trọng nhất: một phép kiểm tra
 đặt confidence 1.0 cho một suy đoán sẽ làm hỏng độ tin cậy của cả công cụ.

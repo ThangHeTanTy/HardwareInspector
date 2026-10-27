@@ -4,7 +4,7 @@ Công cụ desktop (C# / .NET 8 / WPF) thẩm định phần cứng laptop và P
 tình huống cụ thể: **bạn đang cầm một cái máy đã qua sử dụng và cần biết nó có đáng tin không.**
 
 Phần mềm không chỉ liệt kê thông số. Nó đọc các "đồng hồ" mà từng linh kiện tự ghi lại,
-đối chiếu chúng với nhau để tìm mâu thuẫn, và soi tầng firmware xem có dấu hiệu bị can thiệp.
+đối chiếu chúng với nhau để tìm mâu thuẫn, và kiểm tra linh kiện có bị đổi tên/làm giả không.
 
 > Đọc [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) trước. Nó giải thích cách nghĩ
 > đứng sau từng phép kiểm tra, và trung thực về những gì công cụ này *không* làm được.
@@ -63,7 +63,7 @@ có file `portable.txt` cạnh .exe) thì cài đặt, danh sách so sánh và b
 Màn hình nối qua bộ chuyển đổi (ví dụ màn VGA cắm qua chip DisplayPort→VGA) có thể bị nhận sai cổng;
 khi đó chọn tay "Cổng thật của màn hình" trong phần Màn hình, lựa chọn được ghi nhớ cho lần sau.
 
-Giao diện, kết quả phân tích, phát hiện firmware, nhật ký sự cố, kết quả chạy tải và biên bản HTML
+Giao diện, kết quả phân tích, nhật ký sự cố, kết quả chạy tải và biên bản HTML
 đều có hai ngôn ngữ Tiếng Việt / English. Đổi ngôn ngữ thì toàn bộ câu chữ đổi theo ngay,
 dựng lại từ dữ liệu đã thu nên không phải quét lại máy.
 
@@ -75,25 +75,17 @@ dựng lại từ dữ liệu đã thu nên không phải quét lại máy.
 | Ổ lưu trữ | S.M.A.R.T. đầy đủ: giờ chạy, sector hỏng, TBW, tuổi thọ NAND, cảm biến va đập |
 | Pin | Chu kỳ sạc, độ chai so với thiết kế, ngày sản xuất, chất liệu |
 | Màn hình | EDID thô: mã tấm nền thật, tuần/năm sản xuất, độ sâu màu, kích thước; cổng thật kể cả khi màn VGA đi qua bộ chuyển DP/HDMI→VGA |
-| Bo mạch | Serial hệ thống/bo/vỏ, cảm biến mở vỏ, kênh cấp phép Windows |
+| Bo mạch | Model bo, từng khe RAM / PCIe / M.2 (đang dùng hay trống), cổng ngoài và đầu cắm trên bo, RAM tối đa, trần tốc độ SSD, kênh cấp phép Windows |
 
-**Kiểm tra BIOS đã bị can thiệp chưa** — tám phép kiểm tra ở bốn tầng:
-
-- Chuỗi khởi động Secure Boot: trạng thái bật/tắt, **Setup Mode** (khoá nền tảng bị xoá),
-  sự hiện diện của khoá PK, độ mới của danh sách thu hồi dbx
-- **Bảng ACPI WPBT** — cơ chế cho phép firmware chạy file thực thi trong Windows
-  ở mỗi lần khởi động, sống sót qua cả format ổ cứng
-- Bảng **MSDM/SLIC** — khoá Windows OEM nạp tại nhà máy; vắng mặt trên laptop
-  thương hiệu là chỉ dấu mạnh cho việc bo mạch đã bị thay
-- SMBIOS thô đọc trực tiếp từ firmware: trường định danh để mặc định, serial lệch nhau
-- Chuỗi phiên bản BIOS chứa dấu hiệu bản mod, ngày phát hành bất thường, microcode bị hạ cấp
-- Công tắc khởi động Windows: `testsigning`, `nointegritychecks`, `debug`
-- Quét phân vùng EFI: liệt kê mọi file `.efi`, tính SHA-256, đánh dấu file ngoài đường dẫn chuẩn
-- TPM, Measured Boot, VBS/HVCI, Kernel DMA Protection
+**BIOS không nằm trong tiêu chí chấm điểm.** BIOS đi kèm bo mạch do hãng phát hành và cập nhật;
+trên bo bán lẻ các trường nó khai (serial, tên hệ thống, ngày phát hành, Secure Boot) thường để mặc định
+ngay từ khi mới mua, nên dùng chúng để chấm điểm chỉ sinh cảnh báo sai. Phần bo mạch chỉ xét model bo,
+từng khe RAM / PCIe / M.2 đang dùng hay còn trống, cổng kết nối và khả năng nâng cấp.
+Mật khẩu BIOS vẫn được báo trong mục *Khoá & quyền sở hữu* vì đó là thứ khoá máy thật sự.
 
 **Đối chiếu chéo để phát hiện mâu thuẫn** — phần cốt lõi khi thẩm định máy cũ:
 
-- Tuổi máy suy ra từ BIOS, giờ chạy ổ cứng, năm sản xuất tấm nền, ngày sản xuất pin
+- Tuổi máy suy ra từ giờ chạy ổ cứng, năm sản xuất tấm nền, ngày sản xuất pin
   có khớp nhau không
 - Pin gần như mới trên máy có ổ chạy 20.000 giờ → pin vừa được thay để "làm đẹp" máy
 - Ổ cứng chạy trên 60% toàn bộ thời gian kể từ ngày xuất xưởng → máy chạy 24/7,
@@ -133,7 +125,7 @@ HardwareInspector/
     │   ├── Abstractions/              #   IInfoCollector, IComponentAnalyzer, ...
     │   ├── Models/
     │   │   ├── Components/            #   ProcessorInfo, StorageInfo, BatteryInfo, ...
-    │   │   ├── Firmware/              #   SmbiosStructure, SecureBootState, TpmState
+    │   │   ├── Firmware/              #   SmbiosStructure
     │   │   ├── Sensors/               #   SensorReading, SensorStats (min/max/avg)
     │   │   └── Assessment/            #   ComponentAssessment, TrustReport
     │   └── Utils/                     #   RatingScale, FormatHelpers
@@ -147,13 +139,10 @@ HardwareInspector/
     │
     ├── HardwareInspector.Sensors/     # LibreHardwareMonitor + thống kê min/max/avg
     │
-    ├── HardwareInspector.Firmware/    # tầng nhạy cảm nhất
-    │   ├── Native/                    #   P/Invoke GetSystemFirmwareTable, biến UEFI
-    │   ├── Smbios/                    #   đọc + giải mã bảng SMBIOS thô
-    │   ├── Acpi/                      #   liệt kê bảng ACPI, tìm WPBT/MSDM
-    │   ├── Uefi/                      #   SecureBootInspector, EspScanner
-    │   ├── Tpm/                       #   TPM + Device Guard
-    │   └── Checks/                    #   8 phép kiểm tra, mỗi cái một câu hỏi
+    ├── HardwareInspector.Firmware/    # đọc bảng SMBIOS thô (khe RAM, khe mở rộng, cổng)
+    │   ├── Native/                    #   P/Invoke GetSystemFirmwareTable
+    │   ├── Smbios/                    #   SmbiosReader
+    │   └── Upgrade/                   #   khả năng nâng cấp: khe cắm, cổng, RAM tối đa
     │
     ├── HardwareInspector.Analysis/    # chấm điểm và kết luận
     │   ├── Scoring/                   #   ScoreCard
@@ -182,10 +171,8 @@ dotnet run --project src/HardwareInspector.App
 Yêu cầu: .NET 8 SDK, Windows 10 1809 trở lên.
 
 **Bắt buộc chạy với quyền Administrator.** `app.manifest` đã khai báo `requireAdministrator`
-nên Windows sẽ tự hỏi. Không có quyền này thì mất S.M.A.R.T., cảm biến nhiệt,
-biến UEFI và phân vùng EFI — tức là mất phần lớn giá trị của công cụ.
-Khi thiếu quyền, phần mềm báo trạng thái firmware là *chưa đủ dữ liệu* chứ không bao giờ
-báo *sạch*.
+nên Windows sẽ tự hỏi. Không có quyền này thì mất S.M.A.R.T. và cảm biến nhiệt
+— tức là mất phần lớn giá trị của công cụ.
 
 **Driver cảm biến.** LibreHardwareMonitor nạp driver kernel WinRing0 (dịch vụ `R0HardwareInspector`).
 Ứng dụng đặt file driver trong `%TEMP%` chứ không để cạnh file .exe, nên kể cả khi tiến trình bị dừng
@@ -202,7 +189,7 @@ Bản build cũ còn kẹt file `HardwareInspector.sys` trong thư mục `bin` t
 | `System.Diagnostics.EventLog` | Đọc nhật ký sự cố hệ thống |
 | `Vortice.Direct3D11`, `Vortice.D3DCompiler` | Compute shader Direct3D 11 cho bài tải GPU và kiểm tra VRAM |
 
-Còn lại đều dùng P/Invoke trực tiếp tới API Windows — SMBIOS, ACPI, biến UEFI, EDID
+Còn lại đều dùng P/Invoke trực tiếp tới API Windows — SMBIOS, EDID
 đều tự đọc và tự parse.
 
 ---
@@ -210,12 +197,11 @@ Còn lại đều dùng P/Invoke trực tiếp tới API Windows — SMBIOS, ACP
 ## Quy trình sử dụng khuyến nghị
 
 1. **Bắt đầu kiểm tra** — quét toàn bộ, mất khoảng 20-40 giây
-2. Đọc tab **BIOS & bảo mật** trước. Nếu ở đây có vấn đề, mọi thứ khác thành thứ yếu
-3. Đọc tab **Đối chiếu chéo** — đây là chỗ lộ ra sự không trung thực
-4. **Chạy tải nặng** 15 phút, rồi quay lại tab Linh kiện xem nhiệt độ dưới tải
-5. **Kiểm tra màn hình** trong phòng tối
-6. Làm hết tab **Kiểm tra tay** — danh sách này thay đổi theo những gì vừa phát hiện
-7. **Xuất biên bản** để lưu hoặc đưa người bán xem
+2. Đọc tab **Mua hay không** và **Đối chiếu chéo** — đây là chỗ lộ ra sự không trung thực
+3. **Chạy tải nặng** 15 phút, rồi quay lại tab Linh kiện xem nhiệt độ dưới tải
+4. **Kiểm tra màn hình** trong phòng tối
+5. Làm hết tab **Kiểm tra tay** — danh sách này thay đổi theo những gì vừa phát hiện
+6. **Xuất biên bản** để lưu hoặc đưa người bán xem
 
 ---
 
@@ -223,11 +209,10 @@ Còn lại đều dùng P/Invoke trực tiếp tới API Windows — SMBIOS, ACP
 
 Phần mềm chạy trong Windows không thể:
 
-- Đọc nội dung chip BIOS để so byte-by-byte với bản gốc — cần programmer SPI và tháo máy
 - Phát hiện RAM lỗi nhẹ — cần MemTest86 từ USB
 - Thấy artifact GPU — cần chạy tải đồ hoạ thật và nhìn bằng mắt
 - Đánh giá tụ phồng, bản lề nứt, ẩm mốc, chất lượng nguồn
 
-Một firmware đã bị can thiệp hoàn toàn có thể nói dối về chính nó.
+Thông tin khe cắm do bo mạch tự khai nên có thể thiếu hoặc lệch so với thực tế.
 Vì vậy mọi kết luận đều kèm mức độ chắc chắn, và mọi báo cáo đều kết thúc
 bằng checklist kiểm tra tay.

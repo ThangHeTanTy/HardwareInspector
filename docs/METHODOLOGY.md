@@ -9,7 +9,7 @@ hiểu vì sao từng phép kiểm tra tồn tại, và quan trọng hơn — hi
 
 **Không tin bất kỳ con số đơn lẻ nào.**
 
-Người bán có thể cài lại Windows, thay pin, lau sạch vỏ, thậm chí ghi lại serial trong BIOS.
+Người bán có thể cài lại Windows, thay pin, lau sạch vỏ.
 Nhưng để làm cho *tất cả* các dấu vết cùng khớp với một câu chuyện giả thì cần công sức
 vượt xa giá trị của việc lừa một giao dịch. Vì vậy phương pháp ở đây không đi tìm
 "con số xấu" — nó đi tìm **chỗ các con số mâu thuẫn với nhau**.
@@ -21,7 +21,6 @@ Mỗi linh kiện trong máy mang một loại đồng hồ riêng, và các đ�
 | Ổ cứng | Số giờ cấp điện, số lần bật/tắt, tổng dữ liệu đã ghi | Không, nằm trong firmware ổ |
 | Pin | Số chu kỳ sạc, dung lượng còn lại, ngày sản xuất | Không, nằm trong vi điều khiển pin |
 | Tấm nền | Tuần/năm sản xuất trong EDID | Không, trừ khi thay tấm nền |
-| BIOS | Ngày phát hành, phiên bản | Có, nhưng cần thiết bị chuyên dụng |
 | Windows | Ngày cài, nhật ký sự cố | Có, chỉ cần cài lại |
 | Vỏ máy | Ốc toét, xước, bản lề | Không, chỉ nhìn được bằng mắt |
 
@@ -32,43 +31,28 @@ Khi chúng lệch nhau, điểm lệch chính là câu hỏi cần đặt cho ng
 
 ## Bảy tầng kiểm tra, theo thứ tự ưu tiên
 
-### Tầng 1 — Định danh: máy này có đúng là máy nó nói không?
+### Tầng 1 — Bo mạch: model gì, khe cắm ra sao, còn nâng cấp được tới đâu
 
-Đọc SMBIOS thô từ firmware (không qua WMI, vì WMI đã làm sạch dữ liệu) và kiểm tra:
+Đọc bảng SMBIOS thô (không qua WMI, vì WMI bỏ bớt dữ liệu) để liệt kê:
 
-- Serial hệ thống, serial bo mạch, serial vỏ máy có được nạp đầy đủ không.
-  Chuỗi kiểu `To Be Filled By O.E.M.` hoặc `Default string` trên máy thương hiệu
-  là dấu hiệu bo mạch không phải hàng gốc, hoặc BIOS đã bị ghi lại bằng programmer.
-- Bảng ACPI **MSDM**: khoá Windows OEM nạp tại nhà máy, gắn với bo mạch.
-  Laptop thương hiệu bán kèm Windows mà không có MSDM → bo mạch đã bị thay,
-  hoặc máy vốn bán ra không kèm Windows. Đây là một trong những chỉ dấu mạnh nhất.
-- Đối chiếu với tem serial in trên vỏ máy. Đây là bước bắt buộc làm bằng tay.
+- Model bo mạch và hãng máy (máy tự ráp thì dùng tên bo mạch).
+- Từng khe RAM: đang cắm thanh gì (dung lượng, loại, tốc độ) hay còn trống; RAM tối đa bo hỗ trợ.
+- Từng khe PCIe / M.2: đang dùng hay còn trống, đời PCIe và số làn — từ đó suy ra trần tốc độ SSD.
+- Cổng ngoài và đầu cắm trên bo (SATA, quạt, header USB) mà bo mạch tự khai.
 
-### Tầng 2 — Firmware: có ai đó đã can thiệp vào tầng dưới hệ điều hành chưa?
+Phần này chỉ là thông tin, không trừ điểm: bo ít khe không phải bo hỏng.
 
-Đây là tầng quan trọng nhất vì mã độc ở đây **sống sót qua cả format ổ cứng lẫn thay ổ mới**.
-Bốn hướng kiểm tra:
+**BIOS cố ý không nằm trong tiêu chí.** BIOS đi kèm bo mạch do hãng phát hành và cập nhật.
+Trên bo bán lẻ, các trường nó khai — serial, tên hệ thống (`To Be Filled By O.E.M.`,
+`Default string`), ngày phát hành, cảm biến mở vỏ, Secure Boot — thường để mặc định ngay từ
+khi mới mua, và ngày phát hành BIOS không nói gì về tuổi của chiếc máy cụ thể. Dùng chúng để
+chấm điểm chỉ sinh cảnh báo sai trên bo mới. Ngoại lệ duy nhất là mật khẩu BIOS, được báo trong
+mục *Khoá & quyền sở hữu* vì nó khoá máy thật sự.
 
-**a. Chuỗi khởi động Secure Boot.** Muốn nạp bootloader không có chữ ký hợp lệ,
-kẻ tấn công gần như buộc phải xoá khoá nền tảng (PK) hoặc tắt Secure Boot.
-Trạng thái *Setup Mode* — nghĩa là PK rỗng — là cảnh báo nghiêm trọng nhất
-mà công cụ này phát ra.
+### Tầng 2 — Khoá & quyền sở hữu: máy còn thuộc tổ chức khác không?
 
-**b. Bảng WPBT.** Đây là cơ chế cho phép firmware nhúng một file `.exe`
-mà Windows chạy với quyền hệ thống ở **mỗi lần khởi động**, độc lập với ổ cứng.
-Một số OEM dùng WPBT hợp pháp cho driver và phần mềm chống trộm.
-Nhưng đây cũng chính là đường đi của LoJax và các bootkit thương mại.
-Sự có mặt của WPBT không tự nó chứng minh điều xấu — nó là câu hỏi cần trả lời:
-*hãng này có công bố dùng WPBT cho dòng máy này không?*
-
-**c. Cấu hình khởi động Windows.** Ba công tắc mà máy dùng bình thường không cần bật:
-`testsigning`, `nointegritychecks`, `debug`. Mỗi cái đều nới lỏng việc xác thực
-chữ ký driver kernel.
-
-**d. Nội dung phân vùng EFI.** Mọi file `.efi` nằm ngoài đường dẫn của Microsoft
-và các OEM lớn đều cần được giải thích. Lưu ý: bản cài Linux, rEFInd hay công cụ
-chẩn đoán của hãng cũng tạo file ở đây, nên đây là tín hiệu cần đối chiếu
-chứ không phải kết luận.
+Autopilot, MDM, tài khoản tổ chức, Intel AMT, phần mềm chống trộm Absolute và mật khẩu BIOS.
+Máy còn bị quản lý có thể bị khoá từ xa sau khi mua.
 
 ### Tầng 3 — Ổ lưu trữ: cuốn nhật ký trung thực nhất
 
@@ -137,9 +121,9 @@ Nhớ cắm sạc khi chạy, nếu không card bị giới hạn công suất v
 
 ### Tầng 6 — Màn hình: EDID trả lời câu hỏi, mắt trả lời phần còn lại
 
-EDID chứa mã tấm nền thật và tuần/năm sản xuất. Tấm nền sản xuất muộn hơn
-ngày phát hành BIOS hai năm trở lên nghĩa là **màn hình đã được thay**.
-Việc thay màn tự nó không xấu, nhưng nó cho biết máy từng bị va đập hoặc hỏng.
+EDID chứa mã tấm nền thật và tuần/năm sản xuất — đối chiếu với tem máy và
+ngày sản xuất pin để biết màn có phải màn gốc không. Việc thay màn tự nó không xấu,
+nhưng nó cho biết máy từng bị va đập hoặc hỏng.
 
 EDID còn cho biết màn nhận tín hiệu số hay analog. Điều này quan trọng vì Windows chỉ biết
 đầu ra của card đồ hoạ: màn VGA cắm qua bộ chuyển DisplayPort/HDMI→VGA — kể cả cổng VGA trên
@@ -172,18 +156,16 @@ hãy dựa hoàn toàn vào số liệu phần cứng vốn không bị xoá.
 Công cụ chia phát hiện theo **mức độ chắc chắn**, không chỉ theo mức nghiêm trọng:
 
 - **Bằng chứng cứng** (độ tin cậy ≥ 0.9): S.M.A.R.T. báo sector hỏng, pin chai 45%,
-  Setup Mode đang bật. Những thứ này đọc trực tiếp từ phần cứng, không suy diễn.
-- **Suy đoán có cơ sở** (0.5 – 0.9): WPBT tồn tại, tấm nền lệch tuổi so với BIOS,
-  OEM ID không khớp. Cần đối chiếu thêm trước khi kết luận.
+  CPUID không khớp tên CPU. Những thứ này đọc trực tiếp từ phần cứng, không suy diễn.
+- **Suy đoán có cơ sở** (0.5 – 0.9): hiệu năng GPU thấp hơn thông số model,
+  pin mới trên máy có ổ chạy rất lâu. Cần đối chiếu thêm trước khi kết luận.
 - **Tín hiệu yếu** (< 0.5): dùng để gợi ý hướng kiểm tra, không dùng để kết tội.
 
 Điểm trừ được nhân với độ tin cậy, nên một suy đoán yếu không kéo tụt điểm
 như một bằng chứng cứng.
 
-**Kết luận "không phát hiện can thiệp" chỉ có giá trị khi chạy với quyền Administrator.**
-Không có quyền đó, phần mềm bỏ qua kiểm tra phân vùng EFI, cấu hình khởi động và
-phần lớn biến UEFI — và trạng thái tốt nhất nó dám đưa ra là *chưa đủ dữ liệu*,
-chứ không phải *sạch*.
+**Hãy chạy với quyền Administrator.** Không có quyền đó, phần mềm mất S.M.A.R.T.,
+cảm biến nhiệt và một phần kiểm tra khoá doanh nghiệp.
 
 ---
 
@@ -191,19 +173,16 @@ chứ không phải *sạch*.
 
 Trung thực về giới hạn quan trọng ngang với việc phát hiện vấn đề:
 
-1. **Không đọc được nội dung chip BIOS.** Muốn so sánh byte-by-byte với bản gốc của hãng
-   cần tháo máy và dùng programmer SPI (CH341A hoặc tương đương). Phần mềm chỉ đọc được
-   những gì firmware *khai báo* — mà một firmware đã bị can thiệp hoàn toàn có thể nói dối.
-2. **Không phát hiện được RAM lỗi nhẹ.** Phải chạy MemTest86 từ USB, ngoài Windows.
-3. **Không nhìn thấy màn hình.** Bài kiểm tra GPU tự bắt được lỗi VRAM và lỗi tính toán,
+1. **Không phát hiện được RAM lỗi nhẹ.** Phải chạy MemTest86 từ USB, ngoài Windows.
+2. **Không nhìn thấy màn hình.** Bài kiểm tra GPU tự bắt được lỗi VRAM và lỗi tính toán,
    nhưng lỗi chỉ xuất hiện ở khâu dựng hình 3D hoặc đường xuất tín hiệu (sọc, nhấp nháy,
    mất hình qua một cổng) vẫn phải chạy tải đồ hoạ thật và nhìn bằng mắt. Ngoài ra, khi Windows
    thiếu VRAM nó có thể lặng lẽ đẩy dữ liệu sang RAM hệ thống; phần mềm đã chừa khoảng trống
    theo ngân sách VRAM mà Windows báo, nhưng không thể bảo đảm 100% từng byte đã kiểm
    nằm trên chip nhớ của card.
-4. **Không đánh giá được tình trạng vật lý.** Tụ phồng, bản lề nứt, ốc toét, dấu ẩm mốc —
+3. **Không đánh giá được tình trạng vật lý.** Tụ phồng, bản lề nứt, ốc toét, dấu ẩm mốc —
    tất cả đều phải mở máy ra nhìn.
-5. **Không kiểm tra được nguồn (PSU).** Với PC bàn, đây thường là linh kiện nguy hiểm nhất
+4. **Không kiểm tra được nguồn (PSU).** Với PC bàn, đây thường là linh kiện nguy hiểm nhất
    và cũng là thứ người bán ít nói tới nhất.
 
 Vì vậy mọi báo cáo đều kết thúc bằng một checklist kiểm tra tay, và checklist đó

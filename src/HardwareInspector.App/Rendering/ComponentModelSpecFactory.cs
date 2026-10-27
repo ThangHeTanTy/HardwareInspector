@@ -28,7 +28,6 @@ public static class ComponentModelSpecFactory
         // màn 2 trở đi hiện ở dòng của chính nó, giống cách làm với ổ lưu trữ.
         ComponentKind.Display => Display(snapshot, 0),
         ComponentKind.Motherboard => Board(snapshot),
-        ComponentKind.Firmware => Firmware(snapshot),
         ComponentKind.Ownership => Ownership(snapshot),
         _ => new ComponentModelSpec(assessment.Kind)
     };
@@ -81,7 +80,6 @@ public static class ComponentModelSpecFactory
             Gpu = For(ComponentKind.Gpu),
             Memory = memory,
             Battery = snapshot.PrimaryBattery is not null ? Battery(snapshot) : null,
-            Firmware = Firmware(snapshot),
             Drives = drives,
             Displays = Enumerable.Range(0, Math.Min(snapshot.Displays.Count, 4))
                 .Select(i => Display(snapshot, i)).ToList(),
@@ -99,16 +97,6 @@ public static class ComponentModelSpecFactory
                 : Highlight.None
         };
     }
-
-    private static ComponentModelSpec Firmware(SystemSnapshot snapshot) => new(ComponentKind.Firmware)
-    {
-        FirmwareChip = snapshot.Firmware.Status switch
-        {
-            IntegrityStatus.Compromised => Highlight.Fault,
-            IntegrityStatus.Suspicious => Highlight.Warn,
-            _ => Highlight.None
-        }
-    };
 
     // ------------------------------------------------------------------
 

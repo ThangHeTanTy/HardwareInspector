@@ -39,7 +39,7 @@ public sealed class HtmlReportExporter : IReportExporter
               <p class="eyebrow">{S("Biên bản kiểm tra phần cứng", "Hardware inspection report")}</p>
               <h1>{E(a.MachineTitle)}</h1>
               <p class="meta">{S("Lập lúc", "Generated")} {a.GeneratedAtLocal:HH:mm dd/MM/yyyy} · {E(snapshot.OperatingSystem.Caption)}
-              {(snapshot.Firmware.RanWithAdminRights
+              {(snapshot.OperatingSystem.IsAdminSession
                   ? S("· chạy với quyền Administrator", "· run with Administrator rights")
                   : S("· <strong>chưa chạy quyền Administrator</strong>", "· <strong>not run as Administrator</strong>"))}</p>
             </header>
@@ -82,16 +82,6 @@ public sealed class HtmlReportExporter : IReportExporter
                 """);
         }
         sb.Append("</tbody></table></section>");
-
-        // Cảnh báo firmware
-        sb.Append($"""
-            <section class="firmware">
-              <h2>{S("BIOS và chuỗi khởi động", "BIOS and boot chain")}</h2>
-              <p class="status" style="--c:{StatusColor(snapshot.Firmware.Status)}">
-                {E(snapshot.Firmware.Status.ToText())}
-              </p>
-            </section>
-            """);
 
         // Chi tiết từng linh kiện
         foreach (var c in a.Components)
@@ -275,15 +265,6 @@ public sealed class HtmlReportExporter : IReportExporter
             sb.Append($"<tr><td><strong>{E(name)}</strong></td><td>{E(Verdict(ok))}</td><td class=\"note-cell\">{E(detail)}</td></tr>");
         sb.Append("</tbody></table></section>");
     }
-
-    private static string StatusColor(IntegrityStatus status) => status switch
-    {
-        IntegrityStatus.Clean => "#2FBF71",
-        IntegrityStatus.Unverified => "#8A8F98",
-        IntegrityStatus.Suspicious => "#F4A259",
-        IntegrityStatus.Compromised => "#E5544B",
-        _ => "#8A8F98"
-    };
 
     private static string Translate(ComponentKind kind) => kind.ToText();
 

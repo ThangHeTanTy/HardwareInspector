@@ -1,5 +1,4 @@
 using HardwareInspector.Core.Models.Components;
-using HardwareInspector.Core.Models.Firmware;
 using HardwareInspector.Core.Models.Sensors;
 
 namespace HardwareInspector.Core.Models;
@@ -21,7 +20,6 @@ public sealed class SystemSnapshot
     public BaseboardInfo Baseboard { get; set; } = new();
     public BiosInfo Bios { get; set; } = new();
     public OperatingSystemInfo OperatingSystem { get; set; } = new();
-    public FirmwareIntegrityReport Firmware { get; set; } = new();
 
     /// <summary>Dấu hiệu máy thuộc tổ chức khác hoặc bị khoá: Autopilot, MDM, domain, BitLocker, mật khẩu BIOS.</summary>
     public OwnershipInfo Ownership { get; set; } = new();

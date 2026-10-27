@@ -47,8 +47,8 @@ public sealed class GuidedWindow : Window
         _steps = new List<Step>
         {
             new(S("Quét toàn bộ máy", "Scan the whole machine"),
-                S("Đọc cấu hình, sức khoẻ ổ cứng, pin, BIOS và dấu hiệu máy bị khoá. Khoảng 1 phút.",
-                  "Reads the configuration, drive health, battery, BIOS and lock signs. About 1 minute."),
+                S("Đọc cấu hình, sức khoẻ ổ cứng, pin, khe cắm bo mạch và dấu hiệu máy bị khoá. Khoảng 1 phút.",
+                  "Reads the configuration, drive health, battery, board slots and lock signs. About 1 minute."),
                 S("Quét", "Scan"),
                 () => vm.HasResult ? StepState.Done : StepState.NotDone,
                 () => Execute(vm.ScanCommand)),

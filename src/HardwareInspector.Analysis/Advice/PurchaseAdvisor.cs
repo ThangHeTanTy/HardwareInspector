@@ -10,7 +10,7 @@ namespace HardwareInspector.Analysis.Advice;
 /// Biến kết quả kỹ thuật thành lời khuyên mua bán cho người không rành máy tính.
 ///
 /// Ba nhóm, theo thứ tự ưu tiên:
-/// 1. Không nên mua — thứ tiền không sửa được, hoặc là dấu hiệu gian lận (CPU/BIOS bị sửa,
+/// 1. Không nên mua — thứ tiền không sửa được, hoặc là dấu hiệu gian lận (CPU/GPU bị đổi tên,
 ///    VRAM hỏng, máy vẫn thuộc tổ chức khác).
 /// 2. Điều kiện — việc người bán phải làm xong ngay tại chỗ (gỡ mật khẩu BIOS, gỡ chống trộm).
 /// 3. Chi phí — hỏng hóc sửa được bằng tiền, quy ra đồng để làm cơ sở trả giá.
@@ -47,7 +47,7 @@ public sealed class PurchaseAdvisor
         if (s.Ownership.MdmEnrollments.Count > 0)
             b.Add(S("Máy đang bị một tổ chức quản lý từ xa (MDM), có thể bị khoá hoặc xoá bất cứ lúc nào.",
                     "The machine is remotely managed by an organisation (MDM) and can be locked or wiped at any time."));
-        if (Has("AUTH-CPU-001", "AUTH-CPU-002"))
+        if (Has("AUTH-CPU-001"))
             b.Add(S("Tên CPU đã bị sửa để trông như đời cao hơn — dấu hiệu gian lận.",
                     "The CPU name was altered to look like a newer model — a sign of fraud."));
         if (Has("AUTH-GPU-001"))
@@ -62,9 +62,6 @@ public sealed class PurchaseAdvisor
         if (Has("GPU-VRAM-ERR", "GPU-CALC-001", "GPU-TDR-002"))
             b.Add(S("Card đồ hoạ lỗi khi chạy tải (VRAM hỏng, tính sai hoặc driver sập) — sửa thường đắt hơn giá trị card.",
                     "The graphics card fails under load (bad VRAM, wrong results or driver crashes) — repair usually costs more than the card."));
-        if (Has("FW-BIOS-001") || s.Firmware.Status == IntegrityStatus.Compromised)
-            b.Add(S("BIOS/firmware có dấu hiệu bị chỉnh sửa hoặc can thiệp.",
-                    "The BIOS/firmware shows signs of modification or tampering."));
         if (Has("CPU-ES-001"))
             b.Add(S("CPU là mẫu kỹ thuật (ES/QS), không được bảo hành và có thể chạy không ổn định.",
                     "The CPU is an engineering sample (ES/QS) with no warranty and possible instability."));
@@ -91,9 +88,6 @@ public sealed class PurchaseAdvisor
         if (o.AzureAdJoined && !o.AutopilotProfilePresent && o.MdmEnrollments.Count == 0)
             c.Add(S("Người bán ngắt máy khỏi tài khoản tổ chức (Cài đặt → Tài khoản → Truy cập cơ quan hoặc trường học).",
                     "The seller disconnects the machine from the organisation account (Settings → Accounts → Access work or school)."));
-        if (has(new[] { "FW-SB-001" }))
-            c.Add(S("Khôi phục khoá Secure Boot gốc (Restore Factory Keys) và bật lại Secure Boot.",
-                    "Restore the original Secure Boot keys (Restore Factory Keys) and turn Secure Boot back on."));
         if (s.DeviceTests.ScreenOk == false && !s.IsLaptop)
             c.Add(S("Màn hình rời bài soi không đạt — trả giá riêng phần màn hoặc không lấy màn.",
                     "The external monitor failed the screen test — negotiate it separately or leave it out."));
