@@ -93,9 +93,6 @@ public sealed record ComponentModelSpec(ComponentKind Kind)
     /// <summary>Dùng trong cảnh lắp ráp: số khe M.2 đang có ổ, không vẽ tấm tản nhiệt che lên.</summary>
     public int M2Occupied { get; init; }
 
-    // --- Firmware ---
-    public Highlight FirmwareChip { get; init; }
-
     // --- Khoá & quyền sở hữu ---
     /// <summary>Fault: máy bị tổ chức khác quản lý (khoá đóng, đỏ). Warn: còn dấu vết doanh nghiệp. None: khoá mở.</summary>
     public Highlight OwnershipLock { get; init; }
@@ -125,7 +122,6 @@ public sealed record AssemblySpec
     public ComponentModelSpec? Gpu { get; init; }
     public ComponentModelSpec? Memory { get; init; }
     public ComponentModelSpec? Battery { get; init; }
-    public ComponentModelSpec? Firmware { get; init; }
     public IReadOnlyList<ComponentModelSpec> Drives { get; init; } = Array.Empty<ComponentModelSpec>();
     public IReadOnlyList<ComponentModelSpec> Displays { get; init; } = Array.Empty<ComponentModelSpec>();
 

@@ -43,8 +43,6 @@ public sealed class ProcessorAnalyzer : IComponentAnalyzer
                 .MetricIf(cpu.ActualMicroarchitecture is not null, S("Vi kiến trúc thật", "Actual microarchitecture"),
                     cpu.ActualMicroarchitecture.OrDash() +
                     (cpu.ActualGeneration is { } g ? S($" — thế hệ {g}", $" — generation {g}") : string.Empty))
-                .MetricIf(cpu.SmbiosProcessorVersion is not null, S("Tên CPU do BIOS công bố", "CPU name declared by the BIOS"),
-                    cpu.SmbiosProcessorVersion.OrDash(), S("SMBIOS Type 4 — trường này sửa được", "SMBIOS Type 4 — this field can be edited"))
                 .MetricIf(cpu.CpuId.MaxFrequencyMhz > 0, S("Xung tối đa theo CPUID", "Max clock per CPUID"),
                     $"{cpu.CpuId.MaxFrequencyMhz} MHz");
         }

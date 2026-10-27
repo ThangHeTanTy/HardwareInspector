@@ -10,19 +10,14 @@ namespace HardwareInspector.Analysis.Trust;
 /// Phát hiện linh kiện bị khai man.
 ///
 /// Chiêu phổ biến nhất ở thị trường máy cũ là làm cho một con CPU đời thấp
-/// hiện ra như đời cao. Có hai cách làm:
+/// hiện ra như đời cao bằng cách sửa tên hiển thị. Tên thì sửa được, nhưng Family/Model
+/// trong CPUID leaf 1 nằm trong chính silicon.
 ///
-/// 1. Sửa chuỗi Processor Version trong SMBIOS Type 4. Rẻ, nhanh, chỉ cần công cụ
-///    ghi SMBIOS. Nhưng nó chỉ đổi được cái tên mà một số phần mềm đọc từ BIOS.
-///
-/// 2. Sửa hẳn bảng microcode/BIOS mod để đổi chuỗi brand. Khó hơn nhiều và
-///    vẫn không đổi được Family/Model trong CPUID leaf 1, vì giá trị đó
-///    nằm trong chính silicon.
-///
-/// Cách chống lại: đối chiếu ba nguồn tên (CPUID brand string, registry của Windows,
-/// SMBIOS Type 4) với nhau, rồi đối chiếu thế hệ mà cái tên tự nhận với thế hệ thật
-/// suy ra từ Family/Model. Một con i3 thế hệ 5 báo Family 6 Model 3Dh; dù chuỗi tên
-/// có ghi i7-9700K thì Model vẫn là 3Dh, và mâu thuẫn đó lộ ra ngay.
+/// Cách chống lại: đối chiếu thế hệ mà cái tên tự nhận với thế hệ thật suy ra từ
+/// Family/Model, và đối chiếu tên trong registry với chuỗi CPUID. Một con i3 thế hệ 5
+/// báo Family 6 Model 3Dh; dù chuỗi tên có ghi i7-9700K thì Model vẫn là 3Dh.
+/// Không dùng tên CPU trong BIOS: bo mạch bán lẻ hay ghi chuỗi chung chung ở đó,
+/// dễ báo nhầm.
 /// </summary>
 public sealed class ComponentAuthenticityEngine
 {
@@ -99,37 +94,9 @@ public sealed class ComponentAuthenticityEngine
             };
         }
 
-        // --- Đối chiếu 2: tên do BIOS cung cấp với tên do chip cung cấp ---
         var brand = sig.BrandString;
-        if (!string.IsNullOrWhiteSpace(brand) &&
-            !string.IsNullOrWhiteSpace(cpu.SmbiosProcessorVersion) &&
-            !CpuNameParser.NamesMatch(brand, cpu.SmbiosProcessorVersion!) &&
-            !LooksLikeGenericSmbiosString(cpu.SmbiosProcessorVersion!))
-        {
-            yield return new Finding
-            {
-                Code = "AUTH-CPU-002",
-                Component = ComponentKind.Cpu,
-                Severity = Severity.Critical,
-                Title = S("Tên CPU trong BIOS khác tên do chính CPU báo về", "The CPU name in the BIOS differs from what the CPU itself reports"),
-                Detail = S(
-                    $"SMBIOS Type 4 (do BIOS cung cấp, sửa được): \"{cpu.SmbiosProcessorVersion}\"\n" +
-                    $"CPUID brand string (do chip cung cấp): \"{brand}\"\n\n" +
-                    "Trên máy nguyên bản, hai chuỗi này luôn khớp vì BIOS chỉ chép lại chuỗi từ CPUID. " +
-                    "Lệch nhau nghĩa là có người đã ghi tay vào bảng SMBIOS.",
-                    $"SMBIOS Type 4 (from the BIOS, editable): \"{cpu.SmbiosProcessorVersion}\"\n" +
-                    $"CPUID brand string (from the chip): \"{brand}\"\n\n" +
-                    "On an original machine these always match because the BIOS just copies the CPUID string. " +
-                    "A mismatch means someone wrote into the SMBIOS table by hand."),
-                Recommendation = S("Đây là bằng chứng trực tiếp của việc can thiệp BIOS. Không nhận máy.",
-                                   "This is direct evidence of BIOS tampering. Do not accept the machine."),
-                Source = EvidenceSource.Smbios,
-                ScorePenalty = 50,
-                Confidence = 0.85
-            };
-        }
 
-        // --- Đối chiếu 3: tên trong registry với chuỗi CPUID ---
+        // --- Đối chiếu 2: tên trong registry với chuỗi CPUID ---
         if (!string.IsNullOrWhiteSpace(brand) &&
             !string.IsNullOrWhiteSpace(cpu.RegistryProcessorName) &&
             !CpuNameParser.NamesMatch(brand, cpu.RegistryProcessorName!))
@@ -155,7 +122,7 @@ public sealed class ComponentAuthenticityEngine
             };
         }
 
-        // --- Đối chiếu 4: số luồng thật với số luồng của model được khai ---
+        // --- Đối chiếu 3: số luồng thật với số luồng của model được khai ---
         if (sig.LogicalProcessorsFromCpuId > 0 && cpu.LogicalCores > 0 &&
             Math.Abs(sig.LogicalProcessorsFromCpuId - cpu.LogicalCores) > cpu.LogicalCores * 0.5)
         {
@@ -178,7 +145,7 @@ public sealed class ComponentAuthenticityEngine
             };
         }
 
-        // --- Đối chiếu 5: máy ảo ---
+        // --- Đối chiếu 4: máy ảo ---
         if (sig.IsHypervisorPresent)
         {
             var isVm = !string.IsNullOrWhiteSpace(sig.HypervisorVendor) &&
@@ -207,7 +174,7 @@ public sealed class ComponentAuthenticityEngine
             };
         }
 
-        // --- Đối chiếu 6: xung nhịp tối đa với thông số của model ---
+        // --- Đối chiếu 5: xung nhịp tối đa với thông số của model ---
         if (sig.MaxFrequencyMhz > 0 && cpu.MaxClockMhz > 0)
         {
             var ratio = cpu.MaxClockMhz / (double)sig.MaxFrequencyMhz;
@@ -227,17 +194,6 @@ public sealed class ComponentAuthenticityEngine
                     Confidence = 0.5
                 };
         }
-    }
-
-    /// <summary>OEM hay để chuỗi chung chung trong SMBIOS Type 4; đó không phải dấu hiệu gian lận.</summary>
-    private static bool LooksLikeGenericSmbiosString(string value)
-    {
-        var v = value.Trim().ToLowerInvariant();
-        return v.Length < 6
-            || v is "cpu" or "processor" or "central processor" or "none" or "not specified"
-            || v.Contains("to be filled")
-            || v.Contains("default string")
-            || v.Contains("type 0") || v.Contains("family");
     }
 
     // ==================================================================

@@ -70,7 +70,6 @@ public sealed class UiStrings : INotifyPropertyChanged
 
         // --- Thẻ kết luận ---
         ["Verdict.Trust"] = new("MỨC TIN CẬY KHI MUA LẠI", "SECOND-HAND TRUST LEVEL"),
-        ["Verdict.Firmware"] = new("TÌNH TRẠNG BIOS", "BIOS STATUS"),
         ["Verdict.Overview.Tip"] = new(
             "Mô hình tổng thể các linh kiện đọc được và cách chúng nối với nhau. Màu cột mốc trên mỗi linh kiện là mức đánh giá của linh kiện đó.",
             "Overview of every detected component and how they connect. The marker colour on each part is that part's rating."),
@@ -105,7 +104,6 @@ public sealed class UiStrings : INotifyPropertyChanged
         ["Advice.PriceNote"] = new(
             "Giá là mức tham khảo thị trường Việt Nam cho linh kiện phổ thông kèm công thay, để khoảng rộng có chủ đích. Hỏi thêm cửa hàng quen trước khi chốt.",
             "Prices are Vietnamese market references for common parts including labour, kept deliberately wide. Check with a shop you trust before deciding."),
-        ["Tab.Firmware"] = new("BIOS & bảo mật", "BIOS & security"),
         ["Tab.CrossCheck"] = new("Đối chiếu chéo", "Cross-checks"),
         ["Tab.Benchmark"] = new("Kiểm tra tải", "Stress test"),
         ["Tab.Warranty"] = new("Bảo hành", "Warranty"),
@@ -124,18 +122,12 @@ public sealed class UiStrings : INotifyPropertyChanged
         ["Display.Port.Auto"] = new("Tự nhận diện ({0})", "Auto-detect ({0})"),
         ["Detail.Action"] = new("Nên làm: ", "What to do: "),
 
-        // --- Thẻ BIOS ---
-        ["Fw.Eyebrow"] = new("KIỂM TRA CAN THIỆP FIRMWARE", "FIRMWARE TAMPERING CHECKS"),
-        ["Fw.Intro"] = new(
-            "Các phép kiểm tra dưới đây soi bốn tầng: chuỗi khởi động Secure Boot, bảng SMBIOS và ACPI do firmware cung cấp, cấu hình khởi động của Windows, và nội dung phân vùng EFI. Mỗi phát hiện đều ghi rõ mức độ chắc chắn — dấu hiệu suy đoán cần được đối chiếu thêm trước khi kết luận.",
-            "These checks cover four layers: the Secure Boot chain, the SMBIOS and ACPI tables supplied by firmware, Windows boot configuration, and the contents of the EFI partition. Every finding states its confidence — inferred signals need corroboration before you draw a conclusion."),
-
         // --- Thẻ đối chiếu chéo ---
         ["Cross.Eyebrow"] = new("ĐỐI CHIẾU GIỮA CÁC NGUỒN DỮ LIỆU ĐỘC LẬP",
                                 "CROSS-CHECKS BETWEEN INDEPENDENT DATA SOURCES"),
         ["Cross.Intro"] = new(
-            "Mỗi linh kiện mang một loại đồng hồ riêng: số giờ chạy của ổ cứng, số chu kỳ của pin, năm sản xuất tấm nền, ngày phát hành BIOS. Trên một máy nguyên bản và được mô tả trung thực, tất cả kể cùng một câu chuyện. Phần này tìm chỗ chúng mâu thuẫn.",
-            "Every component carries its own clock: drive power-on hours, battery cycle count, panel manufacture year, BIOS release date. On an untouched machine described honestly, they all tell the same story. This section looks for where they contradict each other."),
+            "Mỗi linh kiện mang một loại đồng hồ riêng: số giờ chạy của ổ cứng, số chu kỳ của pin, năm sản xuất tấm nền, ngày sản xuất pin. Trên một máy nguyên bản và được mô tả trung thực, tất cả kể cùng một câu chuyện. Phần này tìm chỗ chúng mâu thuẫn.",
+            "Every component carries its own clock: drive power-on hours, battery cycle count, panel manufacture year, battery manufacture date. On an untouched machine described honestly, they all tell the same story. This section looks for where they contradict each other."),
 
         // --- Thẻ kiểm tra tải ---
         ["Bench.Eyebrow"] = new("KẾT QUẢ CHẠY TẢI", "STRESS TEST RESULTS"),

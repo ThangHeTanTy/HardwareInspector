@@ -22,12 +22,11 @@ public sealed class MachineAssessmentService
 
     /// <summary>
     /// Trọng số phản ánh mức độ ảnh hưởng của từng linh kiện tới trải nghiệm
-    /// và tới rủi ro tài chính khi mua máy cũ. Firmware và ổ cứng nặng nhất
-    /// vì đó là hai thứ vừa khó sửa vừa dễ mất dữ liệu.
+    /// và tới rủi ro tài chính khi mua máy cũ. Ổ cứng nặng nhất vì vừa đắt
+    /// vừa kéo theo mất dữ liệu; khoá doanh nghiệp kế đó vì có thể làm máy vô dụng.
     /// </summary>
     private static readonly Dictionary<ComponentKind, double> Weights = new()
     {
-        [ComponentKind.Firmware] = 1.6,
         [ComponentKind.Storage] = 1.5,
         [ComponentKind.Cpu] = 1.2,
         [ComponentKind.Gpu] = 1.0,
@@ -43,7 +42,6 @@ public sealed class MachineAssessmentService
     {
         _analyzers = analyzers?.ToList() ?? new List<IComponentAnalyzer>
         {
-            new FirmwareAnalyzer(),
             new ProcessorAnalyzer(),
             new GraphicsAnalyzer(),
             new MemoryAnalyzer(),
@@ -60,8 +58,7 @@ public sealed class MachineAssessmentService
     {
         var assessment = new MachineAssessment
         {
-            MachineTitle = BuildTitle(snapshot),
-            Firmware = snapshot.Firmware
+            MachineTitle = BuildTitle(snapshot)
         };
 
         // Chạy trước các analyzer để chúng nhặt được kết quả vào bảng điểm của mình.

@@ -49,15 +49,6 @@ public static class RatingScale
         _ => S("Thông tin", "Information")
     };
 
-    public static string ToText(this IntegrityStatus status) => status switch
-    {
-        IntegrityStatus.Clean => S("Không phát hiện can thiệp", "No tampering detected"),
-        IntegrityStatus.Unverified => S("Không đủ dữ liệu để kết luận", "Not enough data to conclude"),
-        IntegrityStatus.Suspicious => S("Có dấu hiệu bất thường", "Anomalies present"),
-        IntegrityStatus.Compromised => S("Phát hiện dấu hiệu can thiệp", "Signs of tampering found"),
-        _ => S("Chưa kiểm tra", "Not checked")
-    };
-
     public static string ToText(this ComponentKind kind) => kind switch
     {
         ComponentKind.Cpu => S("CPU", "CPU"),

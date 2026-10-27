@@ -84,7 +84,6 @@ public static class ComponentModels
             case ComponentKind.Battery: Battery(b, spec); break;
             case ComponentKind.Display: Display(b, spec); break;
             case ComponentKind.Motherboard: Board(b, spec); break;
-            case ComponentKind.Firmware: BiosChip(b, spec); break;
             case ComponentKind.Ownership: Padlock(b, spec); break;
             case ComponentKind.Cooling: Fan(b, new V3(0, 0.2, 0), 4.5, 9, Highlight.None); break;
             default: b.AddBox("plastic", new V3(0, 0.6, 0), new V3(1.2, 1.2, 1.2)); break;
@@ -926,7 +925,6 @@ public static class ComponentModels
         PlaceBayDrives(b, a, bay, bayX: 26, sataFrom: i => new V3(12.2, 0.5 + (i % 2) * 0.85, 5 + (i / 2) * 1.15));
 
         PlaceMonitors(b, a, a.Displays, videoOut, rowZ: -24);
-        FirmwareMark(b, a, new V3(5.5, 0.28, 12.6));
     }
 
     private static void LaptopAssembly(ModelBuilder b, AssemblySpec a)
@@ -995,8 +993,6 @@ public static class ComponentModels
         }
         var videoOut = Enumerable.Range(0, 4).Select(i => new V3(-14.3, 0.4, -5 + i * 1.5)).ToList();
         PlaceMonitors(b, a, external, videoOut, rowZ: -22, pin: !lidDrawn);
-
-        FirmwareMark(b, a, new V3(7.5, 0.15, -6.5));
     }
 
     private static void PlaceBayDrives(ModelBuilder b, AssemblySpec a, List<ComponentModelSpec> drives,
@@ -1076,13 +1072,6 @@ public static class ComponentModels
         b.AddCylinder("metal_dark", at + new V3(0, 0.45, 0), 0.45, w * 0.7, 24, Axis.X);
     }
 
-    private static void FirmwareMark(ModelBuilder b, AssemblySpec a, V3 at)
-    {
-        if (a.Firmware is not { } fw) return;
-        b.AddBox(M(fw.FirmwareChip, "chip"), at, new V3(0.7, 0.12, 0.6));
-        Pin(b, a, ComponentKind.Firmware, at, 5);
-    }
-
     /// <summary>
     /// Cột mốc đánh dấu một linh kiện trong cảnh lắp ráp: thân mảnh và một khối hình thoi
     /// trên đỉnh, màu theo mức đánh giá của linh kiện đó.
@@ -1115,10 +1104,6 @@ public static class ComponentModels
             b.AddBox(material, (p + q) * 0.5, size);
         }
     }
-
-    // ------------------------------------------------------------------
-    // Firmware — chip BIOS SPI 8 chân
-    // ------------------------------------------------------------------
 
     /// <summary>
     /// Ổ khoá cho mục "Khoá & quyền sở hữu": máy bị tổ chức khác quản lý thì khoá đóng và đỏ,
@@ -1155,27 +1140,5 @@ public static class ComponentModels
                     new V3(length, thick, thick), rotZ: mid + Math.PI / 2);
             }
         }
-    }
-
-    private static void BiosChip(ModelBuilder b, ComponentModelSpec s)
-    {
-        b.AddBox("pcb_green", new V3(0, 0, 0), new V3(2.8, 0.08, 2.2));
-        b.AddBox(M(s.FirmwareChip, "chip"), new V3(-0.3, 0.2, 0), new V3(1.0, 0.3, 0.8));
-        b.AddCylinder("metal_dark", new V3(-0.68, 0.355, -0.24), 0.07, 0.01, 16);
-
-        for (var i = 0; i < 4; i++)
-        {
-            var x = -0.66 + i * 0.24;
-            foreach (var side in new[] { -1, 1 })
-            {
-                b.AddBox("metal", new V3(x, 0.2, side * 0.43), new V3(0.1, 0.06, 0.08));
-                b.AddBox("metal", new V3(x, 0.11, side * 0.48), new V3(0.1, 0.16, 0.04));
-                b.AddBox("metal", new V3(x, 0.06, side * 0.56), new V3(0.1, 0.03, 0.14));
-                b.AddBox("gold", new V3(x, 0.045, side * 0.85), new V3(0.04, 0.005, 0.5));
-            }
-        }
-
-        b.AddCylinder("metal", new V3(0.9, 0.1, 0.2), 0.42, 0.12, 40);   // pin CR2032
-        b.AddCylinder("metal_dark", new V3(0.9, 0.17, 0.2), 0.3, 0.01, 32);
     }
 }

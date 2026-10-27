@@ -50,12 +50,6 @@ public sealed class ProcessorInfo
     /// <summary>Chuỗi tên do CPUID trả về — nguồn đáng tin nhất.</summary>
     public CpuIdSignature CpuId { get; set; } = new();
 
-    /// <summary>
-    /// Chuỗi "Processor Version" trong SMBIOS Type 4. Trường này do BIOS cung cấp
-    /// nên có thể bị sửa. Lệch so với CpuId.BrandString là bằng chứng bị can thiệp.
-    /// </summary>
-    public string? SmbiosProcessorVersion { get; set; }
-
     /// <summary>Tên CPU Windows ghi vào registry lúc khởi động.</summary>
     public string? RegistryProcessorName { get; set; }
 

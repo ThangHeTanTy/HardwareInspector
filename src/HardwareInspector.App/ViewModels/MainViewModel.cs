@@ -261,8 +261,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(OverallColor));
             OnPropertyChanged(nameof(TrustLevelText));
             OnPropertyChanged(nameof(TrustVerdict));
-            OnPropertyChanged(nameof(FirmwareStatusText));
-            OnPropertyChanged(nameof(FirmwareColor));
             OnPropertyChanged(nameof(MachineTitle));
             OnPropertyChanged(nameof(SummaryText));
             OnPropertyChanged(nameof(QuickFacts));
@@ -273,7 +271,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(AdviceCostLine));
             OnPropertyChanged(nameof(CrossChecks));
             OnPropertyChanged(nameof(ManualChecklist));
-            OnPropertyChanged(nameof(FirmwareFindings));
             OnPropertyChanged(nameof(SelectedModelSpec));
             OnPropertyChanged(nameof(SelectedMetricRows));
         }
@@ -528,27 +525,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public string TrustVerdict => _assessment?.Trust.Verdict ?? string.Empty;
 
-    public string FirmwareStatusText => _assessment?.Firmware.Status.ToText() ?? Ui["Verdict.NotChecked"];
-
-    public string FirmwareColor => _assessment?.Firmware.Status switch
-    {
-        IntegrityStatus.Clean => "#2FBF71",
-        IntegrityStatus.Unverified => "#8A8F98",
-        IntegrityStatus.Suspicious => "#F4A259",
-        IntegrityStatus.Compromised => "#E5544B",
-        _ => "#8A8F98"
-    };
-
     public IEnumerable<CrossCheckResult> CrossChecks =>
         _assessment?.Trust.CrossChecks ?? Enumerable.Empty<CrossCheckResult>();
 
     public IEnumerable<ManualCheckItem> ManualChecklist =>
         _assessment?.Trust.ManualChecklist ?? Enumerable.Empty<ManualCheckItem>();
-
-    public IEnumerable<Finding> FirmwareFindings =>
-        (_assessment?.Firmware.Findings ?? new List<Finding>())
-        .Where(f => f.Severity >= Severity.Notice)
-        .OrderByDescending(f => f.Severity);
 
     // -----------------------------------------------------------------
 

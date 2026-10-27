@@ -10,10 +10,14 @@ namespace HardwareInspector.Analysis.Trust;
 ///
 /// Nguyên tắc làm việc: không tin bất kỳ con số đơn lẻ nào. Mỗi linh kiện đều mang
 /// một loại "đồng hồ" riêng — số giờ chạy của ổ cứng, số chu kỳ của pin, năm sản xuất
-/// tấm nền, ngày phát hành BIOS, ngày cài Windows. Trên một cái máy nguyên bản và
+/// tấm nền, ngày sản xuất pin. Trên một cái máy nguyên bản và
 /// được mô tả trung thực, tất cả các đồng hồ đó kể cùng một câu chuyện.
 /// Người bán có thể sửa một hoặc hai con số, nhưng rất khó làm cho tất cả khớp nhau.
 /// Việc của engine này là tìm chỗ chúng mâu thuẫn.
+///
+/// Không dùng BIOS làm căn cứ: BIOS do hãng bo mạch phát hành, ngày phát hành BIOS không nói gì
+/// về tuổi của chiếc máy cụ thể (bo mới mua vẫn có thể mang BIOS ra đời từ hai năm trước),
+/// và các trường định danh trong BIOS của bo mạch bán lẻ thường để trống theo mặc định của hãng.
 /// </summary>
 public sealed class SecondHandTrustEngine
 {
@@ -23,8 +27,7 @@ public sealed class SecondHandTrustEngine
         var deductions = 0;
 
         deductions += RunAgeTriangulation(snapshot, report);
-        deductions += RunFirmwareTrust(snapshot, report);
-        deductions += RunIdentityChecks(snapshot, report);
+        deductions += RunLicenseCheck(snapshot, report);
         deductions += RunWearChecks(snapshot, report);
         deductions += RunOwnershipChecks(snapshot, report);
         deductions += CollectCriticalFindings(components, report);
@@ -44,9 +47,6 @@ public sealed class SecondHandTrustEngine
     {
         var penalty = 0;
         var clocks = new List<(string Source, double Years)>();
-
-        if (snapshot.Bios.ReleaseDate is { } bios)
-            clocks.Add((S("Ngày phát hành BIOS", "BIOS release date"), (DateTime.Now - bios).TotalDays / 365));
 
         var storageHours = snapshot.StorageDevices
             .Where(d => d.PowerOnHours is > 0)
@@ -125,86 +125,12 @@ public sealed class SecondHandTrustEngine
     }
 
     // ---------------------------------------------------------------------
-    // 2. Tin cậy tầng firmware
+    // 2. Bản quyền Windows
     // ---------------------------------------------------------------------
-    private int RunFirmwareTrust(SystemSnapshot snapshot, TrustReport report)
-    {
-        var fw = snapshot.Firmware;
-
-        switch (fw.Status)
-        {
-            case IntegrityStatus.Compromised:
-                report.CrossChecks.Add(new CrossCheckResult(
-                    S("Toàn vẹn firmware", "Firmware integrity"), false,
-                    S("Phát hiện bằng chứng firmware đã bị can thiệp. Đây là loại vấn đề mà cài lại Windows " +
-                      "hoặc thay ổ cứng đều không giải quyết được.",
-                      "Evidence of firmware tampering was found. Reinstalling Windows " +
-                      "or replacing the drive will not fix this kind of problem."),
-                    Severity.Critical));
-                report.RedFlags.AddRange(fw.Findings.Where(f => f.Severity == Severity.Critical));
-                return 45;
-
-            case IntegrityStatus.Suspicious:
-                report.CrossChecks.Add(new CrossCheckResult(
-                    S("Toàn vẹn firmware", "Firmware integrity"), false,
-                    S("Có bất thường ở tầng firmware nhưng chưa đủ để kết luận. Xem chi tiết ở mục BIOS & bảo mật.",
-                      "There are firmware-level anomalies, but not enough to conclude. See BIOS & security for details."),
-                    Severity.Warning));
-                report.RedFlags.AddRange(fw.Findings.Where(f => f.Severity >= Severity.Warning));
-                return 20;
-
-            case IntegrityStatus.Unverified:
-                report.CrossChecks.Add(new CrossCheckResult(
-                    S("Toàn vẹn firmware", "Firmware integrity"), false,
-                    S("Chưa chạy đủ phép kiểm tra do thiếu quyền Administrator. " +
-                      "Không thể coi đây là kết quả sạch.",
-                      "Not all checks ran because Administrator rights were missing. " +
-                      "This cannot be treated as a clean result."),
-                    Severity.Notice));
-                return 8;
-
-            default:
-                report.CrossChecks.Add(new CrossCheckResult(
-                    S("Toàn vẹn firmware", "Firmware integrity"), true,
-                    S("Chuỗi khởi động và bảng firmware không cho thấy dấu hiệu can thiệp.",
-                      "The boot chain and firmware tables show no signs of tampering.")));
-                return 0;
-        }
-    }
-
-    // ---------------------------------------------------------------------
-    // 3. Định danh máy có nhất quán không
-    // ---------------------------------------------------------------------
-    private int RunIdentityChecks(SystemSnapshot snapshot, TrustReport report)
+    private int RunLicenseCheck(SystemSnapshot snapshot, TrustReport report)
     {
         var penalty = 0;
-        var b = snapshot.Baseboard;
 
-        var missing = new List<string>();
-        if (FormatHelpers.IsPlaceholder(b.SystemSerialNumber)) missing.Add(S("serial máy", "system serial"));
-        if (FormatHelpers.IsPlaceholder(b.BoardSerialNumber)) missing.Add(S("serial bo mạch", "board serial"));
-        if (FormatHelpers.IsPlaceholder(b.SystemProductName)) missing.Add(S("tên model", "model name"));
-
-        if (missing.Count >= 2)
-        {
-            penalty += 15;
-            report.CrossChecks.Add(new CrossCheckResult(
-                S("Định danh máy", "Machine identity"), false,
-                S($"Thiếu hoặc để mặc định: {string.Join(", ", missing)}. " +
-                  "Máy nguyên bản của hãng lớn luôn có đầy đủ các trường này.",
-                  $"Missing or left at defaults: {string.Join(", ", missing)}. " +
-                  "Original machines from major brands always have these fields filled in."),
-                Severity.Warning));
-        }
-        else
-        {
-            report.CrossChecks.Add(new CrossCheckResult(
-                S("Định danh máy", "Machine identity"), true,
-                S($"Serial và model được nạp đầy đủ trong firmware ({b.SystemManufacturer} {b.SystemProductName}).",
-                  $"Serial and model are fully programmed in the firmware ({b.SystemManufacturer} {b.SystemProductName}).")));
-        }
-
-        // Kênh cấp phép Windows là chỉ dấu gián tiếp cho việc bo mạch có bị thay không.
         var channel = snapshot.OperatingSystem.LicenseChannel;
         if (!snapshot.OperatingSystem.IsActivated)
         {
@@ -238,7 +164,7 @@ public sealed class SecondHandTrustEngine
     }
 
     // ---------------------------------------------------------------------
-    // 4. Mức hao mòn có tương xứng với lời mô tả không
+    // 3. Mức hao mòn có tương xứng với lời mô tả không
     // ---------------------------------------------------------------------
     private int RunWearChecks(SystemSnapshot snapshot, TrustReport report)
     {
@@ -275,55 +201,11 @@ public sealed class SecondHandTrustEngine
             }
         }
 
-        // Ổ cứng chạy quá nhiều giờ so với tuổi máy tính theo BIOS: máy từng chạy liên tục 24/7.
-        if (snapshot.Bios.ReleaseDate is { } biosDate && storageHours > 0)
-        {
-            var machineAgeHours = (DateTime.Now - biosDate).TotalDays * 24;
-            if (machineAgeHours > 0)
-            {
-                var dutyCycle = storageHours / machineAgeHours;
-                if (dutyCycle > 0.6)
-                {
-                    penalty += 15;
-                    report.CrossChecks.Add(new CrossCheckResult(
-                        S("Cường độ sử dụng", "Usage intensity"), false,
-                        S($"Ổ cứng đã chạy khoảng {dutyCycle:P0} toàn bộ thời gian kể từ khi máy xuất xưởng. " +
-                          "Đây là kiểu vận hành của máy chủ, máy đào coin hoặc máy trạm chạy liên tục, " +
-                          "không phải máy cá nhân dùng hàng ngày.",
-                          $"The drive has been running about {dutyCycle:P0} of the time since the machine shipped. " +
-                          "That is how servers, mining rigs or always-on workstations run, " +
-                          "not a personal machine used day to day."),
-                        Severity.Warning));
-
-                    report.RedFlags.Add(new Finding
-                    {
-                        Code = "TRUST-DUTY-001",
-                        Component = ComponentKind.Storage,
-                        Severity = Severity.Warning,
-                        Title = S($"Máy chạy gần như liên tục ({dutyCycle:P0} thời gian)", $"The machine ran almost continuously ({dutyCycle:P0} of the time)"),
-                        Detail = S($"{storageHours:N0} giờ chạy trên tổng {machineAgeHours:N0} giờ kể từ ngày BIOS.",
-                                   $"{storageHours:N0} hours of running out of {machineAgeHours:N0} hours since the BIOS date."),
-                        Recommendation = S("Hỏi thẳng máy trước đây dùng làm gì. Toàn bộ linh kiện đều chịu mức hao mòn tương ứng.",
-                                           "Ask directly what the machine was used for. Every component carries matching wear."),
-                        ScorePenalty = 15,
-                        Confidence = 0.75
-                    });
-                }
-                else
-                {
-                    report.CrossChecks.Add(new CrossCheckResult(
-                        S("Cường độ sử dụng", "Usage intensity"), true,
-                        S($"Ổ cứng chạy khoảng {dutyCycle:P0} thời gian kể từ ngày xuất xưởng — mức sử dụng cá nhân bình thường.",
-                          $"The drive has run about {dutyCycle:P0} of the time since shipping — normal personal use.")));
-                }
-            }
-        }
-
         return penalty;
     }
 
     // ---------------------------------------------------------------------
-    // 5. Máy có thật sự thuộc về người bán không
+    // 4. Máy có thật sự thuộc về người bán không
     // ---------------------------------------------------------------------
     private int RunOwnershipChecks(SystemSnapshot snapshot, TrustReport report)
     {
@@ -362,7 +244,7 @@ public sealed class SecondHandTrustEngine
     }
 
     // ---------------------------------------------------------------------
-    // 6. Gom các phát hiện nghiêm trọng từ mọi linh kiện
+    // 5. Gom các phát hiện nghiêm trọng từ mọi linh kiện
     // ---------------------------------------------------------------------
     private int CollectCriticalFindings(IReadOnlyList<ComponentAssessment> components, TrustReport report)
     {
@@ -381,7 +263,6 @@ public sealed class SecondHandTrustEngine
     // ---------------------------------------------------------------------
     private TrustLevel DetermineLevel(SystemSnapshot snapshot, TrustReport report)
     {
-        if (snapshot.Firmware.Status == IntegrityStatus.Compromised) return TrustLevel.DoNotBuy;
         if (snapshot.Ownership.AutopilotProfilePresent) return TrustLevel.DoNotBuy;
         if (report.RedFlags.Count(f => f.Severity == Severity.Critical) >= 3) return TrustLevel.DoNotBuy;
 
@@ -506,19 +387,9 @@ public sealed class SecondHandTrustEngine
                   "Check that the CPU cooler is not loose or mounted crooked."));
         }
 
-        if (snapshot.Firmware.Status is IntegrityStatus.Suspicious or IntegrityStatus.Compromised)
-        {
-            Add(S("Nạp lại BIOS gốc tải từ trang chủ hãng theo đúng serial máy.",
-                  "Reflash the original BIOS downloaded from the manufacturer's site for this serial."));
-            Add(S("Vào BIOS chọn Restore Factory Keys rồi bật Secure Boot, kiểm tra máy còn khởi động được không.",
-                  "In the BIOS choose Restore Factory Keys, enable Secure Boot and check that the machine still boots."));
-            Add(S("Cài lại Windows sạch từ file ISO tải trực tiếp từ Microsoft, không dùng bản ghost của người bán.",
-                  "Clean-install Windows from an ISO downloaded directly from Microsoft, not the seller's disk image."));
-        }
-
-        if (!snapshot.Firmware.RanWithAdminRights)
+        if (!snapshot.OperatingSystem.IsAdminSession)
             list.Insert(0, new ManualCheckItem(
-                S("Chạy lại ứng dụng này với quyền Administrator để mở khoá các phép kiểm tra firmware và S.M.A.R.T.",
-                  "Run this app again as Administrator to unlock the firmware and S.M.A.R.T. checks.")));
+                S("Chạy lại ứng dụng này với quyền Administrator để đọc được S.M.A.R.T., cảm biến nhiệt và trạng thái khoá máy.",
+                  "Run this app again as Administrator to read S.M.A.R.T., temperature sensors and lock status.")));
     }
 }

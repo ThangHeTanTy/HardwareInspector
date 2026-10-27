@@ -5,7 +5,6 @@ using HardwareInspector.Core.Abstractions;
 using HardwareInspector.Core.Models;
 using HardwareInspector.Core.Models.Assessment;
 using HardwareInspector.Core.Models.Diagnostics;
-using HardwareInspector.Firmware;
 using HardwareInspector.Firmware.Upgrade;
 using HardwareInspector.Sensors;
 using static HardwareInspector.Core.Localization.Loc;
@@ -55,7 +54,6 @@ public sealed class InspectionPipeline : IDisposable
             new OwnershipCollector(),
             new UpgradeCapabilityCollector(),
             new ReliabilityScanner(),
-            new FirmwareIntegrityService(),
             new SensorSnapshotCollector(SensorMonitor)
         };
 
