@@ -3,6 +3,7 @@ using HardwareInspector.Core.Abstractions;
 using HardwareInspector.Core.Models;
 using HardwareInspector.Core.Models.Assessment;
 using HardwareInspector.Core.Models.Components;
+using HardwareInspector.Core.Models.Diagnostics;
 using HardwareInspector.Core.Utils;
 using static HardwareInspector.Core.Localization.Loc;
 
@@ -90,6 +91,7 @@ public sealed class DisplayAnalyzer : IComponentAnalyzer
 
             AnalyzeAge(card, display);
             AnalyzeMode(card, display);
+            AnalyzeGamut(card, display);
 
             if (display.BitsPerColor is 6)
                 card.Add("DSP-PANEL-001", Kind, Severity.Notice,
@@ -100,6 +102,8 @@ public sealed class DisplayAnalyzer : IComponentAnalyzer
                       "These are usually budget panels — check whether it matches the machine's original configuration."),
                     penalty: 6, confidence: 0.8, source: EvidenceSource.Edid);
         }
+
+        AnalyzePixelDefects(card, display, snapshot);
 
         card.Add("DSP-MANUAL-001", Kind, Severity.Info,
             S("Cần chạy bài kiểm tra màn hình bằng mắt", "A visual screen test is needed"),
@@ -136,6 +140,100 @@ public sealed class DisplayAnalyzer : IComponentAnalyzer
         var age = DateTime.Now.Year - year;
         card.Metric(S("Ngày sản xuất tấm nền", "Panel manufacture date"), $"{weekText}{year}", S($"Khoảng {age} năm tuổi", $"About {age} years old"));
         card.Uptime(TimeSpan.FromDays(age * 365.0));
+    }
+
+    /// <summary>
+    /// Điểm ảnh lỗi người dùng đánh dấu trong bài kiểm tra màn hình, đối chiếu với
+    /// ISO 9241-307 lớp II. Phần mềm không tự thấy được điểm chết — card đồ hoạ vẫn gửi
+    /// đúng màu, lỗi nằm ở tấm nền — nên nguồn dữ liệu duy nhất là mắt người dùng.
+    /// </summary>
+    private void AnalyzePixelDefects(ScoreCard card, DisplayInfo display, SystemSnapshot snapshot)
+    {
+        var sum = PixelDefectPolicy.Summarize(snapshot.DeviceTests, display);
+        if (!sum.Any) return;
+
+        card.Metric(S("Điểm ảnh lỗi (đánh dấu tay)", "Pixel defects (marked by you)"), sum.CountsText, sum.IsoText,
+            sum.Serious ? Severity.Warning : Severity.Notice);
+
+        var dots = sum.Bright + sum.Dark + sum.Subpixel;
+        if (sum.Serious)
+            card.Add("DSP-PIX-001", Kind, Severity.Warning,
+                sum.ExceedsIso
+                    ? S($"Số điểm ảnh lỗi vượt ngưỡng ISO 9241-307: {sum.CountsText}", $"Pixel defects exceed ISO 9241-307: {sum.CountsText}")
+                    : S($"Có điểm sáng/điểm chết ở vùng giữa màn: {sum.CountsText}", $"Bright/dead pixels in the centre zone: {sum.CountsText}"),
+                S("Lỗi điểm ảnh không tự hết và không sửa được bằng phần mềm (trừ điểm kẹt màu đôi khi hết sau khi nháy màu). " +
+                  "Ở vùng giữa, một chấm thôi cũng đập vào mắt mỗi ngày.",
+                  "Pixel defects do not go away and cannot be fixed in software (a stuck pixel sometimes recovers after colour flashing). " +
+                  "In the centre zone even one dot is in your face every day."),
+                S("Thử chế độ nháy màu (phím F) vài phút. Không hết thì trừ tiền thay tấm nền hoặc bỏ qua máy này.",
+                  "Try the flashing mode (F key) for a few minutes. If it stays, deduct the cost of a new panel or walk away."),
+                penalty: 20, confidence: 0.9, source: EvidenceSource.UserInput);
+        else if (dots > 0)
+            card.Add("DSP-PIX-002", Kind, Severity.Notice,
+                S($"Có {dots} điểm ảnh lỗi ở vùng rìa, vẫn trong ngưỡng ISO", $"{dots} pixel defect(s) near the edges, within ISO limits"),
+                S("Theo chuẩn, số lỗi này vẫn được coi là đạt và nhiều hãng không đổi bảo hành. Ở vùng rìa thì ít ảnh hưởng khi dùng.",
+                  "By the standard this count still passes and many makers will not replace it under warranty. Near the edges it rarely bothers you."),
+                S("Dùng làm lý do trả giá nhẹ.", "Use it to negotiate a small discount."),
+                penalty: Math.Min(4 * dots, 12), confidence: 0.9, source: EvidenceSource.UserInput);
+
+        if (sum.Blemish > 0)
+            card.Add("DSP-PIX-003", Kind, Severity.Notice,
+                S($"Có {sum.Blemish} vết loang/ố trên nền xám hoặc dải màu", $"{sum.Blemish} blemish(es) on grey or gradient backgrounds"),
+                S("Vết loang (mura), ố vàng hoặc bóng mờ thường do tấm nền già, từng bị đè ép hoặc lưu ảnh lâu ngày.",
+                  "Clouding (mura), yellow patches or ghosting usually come from an ageing panel, past pressure or long-term image retention."),
+                penalty: 5, confidence: 0.8, source: EvidenceSource.UserInput);
+    }
+
+    /// <summary>
+    /// Độ phủ màu tính từ toạ độ màu gốc trong EDID. Là số hãng khai chứ không phải đo,
+    /// nên chỉ trừ điểm nhẹ: dải màu hẹp không phải hỏng hóc, nhưng người mua cần biết
+    /// trước khi trả giá cho một chiếc máy được quảng cáo là "màn đẹp".
+    /// </summary>
+    private void AnalyzeGamut(ScoreCard card, DisplayInfo display)
+    {
+        if (display.Primaries is not { } p)
+        {
+            card.Metric(S("Độ phủ màu", "Colour gamut"), S("EDID không khai toạ độ màu", "EDID declares no colour coordinates"));
+            return;
+        }
+
+        var srgb = ColorGamut.Coverage(p, ColorGamut.Srgb);
+        var p3 = ColorGamut.Coverage(p, ColorGamut.DciP3);
+        var adobe = ColorGamut.Coverage(p, ColorGamut.AdobeRgb);
+        var ntsc = ColorGamut.AreaRatio(p, ColorGamut.Ntsc1953);
+        var textbook = ColorGamut.IsTextbookSrgb(p);
+
+        var tier = srgb < 70
+            ? S("dải màu hẹp — màu nhợt, chỉ hợp văn phòng", "narrow gamut — washed-out colours, office use only")
+            : srgb < 90
+                ? S("dải màu trung bình", "average gamut")
+                : p3 >= 90
+                    ? S("dải màu rộng — hợp chỉnh ảnh, dựng phim", "wide gamut — suits photo and video work")
+                    : S("phủ đủ sRGB — màu chuẩn cho web và văn phòng", "full sRGB — accurate colours for web and office");
+
+        card.Metric(S("Độ phủ màu (theo EDID)", "Colour gamut (from EDID)"),
+            $"sRGB {srgb:0}% · DCI-P3 {p3:0}% · Adobe RGB {adobe:0}% · NTSC {ntsc:0}%",
+            S($"Tấm nền {tier}. Đây là toạ độ màu hãng tấm nền khai, không phải đo; đo thật cần máy đo màu.",
+              $"Panel has a {tier}. These are the panel maker's declared coordinates, not a measurement; a real measurement needs a colorimeter.") +
+            (textbook
+                ? S(" Toạ độ trùng khít chuẩn sRGB — có thể hãng chỉ điền giá trị mặc định.",
+                    " The coordinates match sRGB exactly — the maker may have filled in default values.")
+                : string.Empty));
+        card.Metric(S("Điểm trắng", "White point"), $"x {p.WhiteX:0.000} · y {p.WhiteY:0.000}",
+            S("Chuẩn D65 là x 0.313 · y 0.329", "The D65 standard is x 0.313 · y 0.329"));
+
+        if (srgb < 70 && !textbook)
+            card.Add("DSP-GAMUT-001", Kind, Severity.Notice,
+                S($"Tấm nền dải màu hẹp: khoảng {srgb:0}% sRGB (~{ntsc:0}% NTSC)", $"Narrow-gamut panel: about {srgb:0}% sRGB (~{ntsc:0}% NTSC)"),
+                S("Đây là loại tấm nền giá rẻ hay gặp trên laptop văn phòng (quảng cáo \"45% NTSC\"): màu nhợt, đỏ và lục kém rực. " +
+                  "Dùng văn phòng, học tập thì ổn, nhưng không hợp chỉnh ảnh, thiết kế. " +
+                  "Nếu người bán quảng cáo \"màn đẹp, màu chuẩn\" thì đây là điểm để trả giá.",
+                  "This is the budget panel common in office laptops (sold as \"45% NTSC\"): washed-out colours, weak reds and greens. " +
+                  "Fine for office work and study, but not for photo editing or design. " +
+                  "If the seller advertises \"great, accurate colours\", use this to negotiate."),
+                S("Nếu cần màu đẹp, hỏi xem dòng máy này có bản tấm nền 100% sRGB để thay không.",
+                  "If colour matters, ask whether this model has a 100% sRGB panel option you could swap in."),
+                penalty: 4, confidence: 0.7, source: EvidenceSource.Edid);
     }
 
     /// <summary>

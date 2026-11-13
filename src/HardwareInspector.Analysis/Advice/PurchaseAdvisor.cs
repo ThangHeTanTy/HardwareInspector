@@ -1,4 +1,5 @@
 using HardwareInspector.Core.Models;
+using HardwareInspector.Core.Models.Diagnostics;
 using HardwareInspector.Core.Models.Assessment;
 using HardwareInspector.Core.Models.Components;
 using HardwareInspector.Core.Utils;
@@ -88,7 +89,7 @@ public sealed class PurchaseAdvisor
         if (o.AzureAdJoined && !o.AutopilotProfilePresent && o.MdmEnrollments.Count == 0)
             c.Add(S("Người bán ngắt máy khỏi tài khoản tổ chức (Cài đặt → Tài khoản → Truy cập cơ quan hoặc trường học).",
                     "The seller disconnects the machine from the organisation account (Settings → Accounts → Access work or school)."));
-        if (s.DeviceTests.ScreenOk == false && !s.IsLaptop)
+        if (!s.IsLaptop && (s.DeviceTests.ScreenOk == false || HasSeriousPixelDefects(s)))
             c.Add(S("Màn hình rời bài soi không đạt — trả giá riêng phần màn hoặc không lấy màn.",
                     "The external monitor failed the screen test — negotiate it separately or leave it out."));
         if (!s.OperatingSystem.IsActivated)
@@ -201,12 +202,17 @@ public sealed class PurchaseAdvisor
                   $"{(t.WifiOk == false ? "Wi-Fi" : string.Empty)}{(t.WifiOk == false && t.BluetoothOk == false ? " and " : string.Empty)}{(t.BluetoothOk == false ? "Bluetooth" : string.Empty)} failed. Both usually share one card."),
                 laptop ? 200_000 : 150_000, laptop ? 500_000 : 350_000));
 
-        if (t.ScreenOk == false && laptop)
+        if (laptop && (t.ScreenOk == false || HasSeriousPixelDefects(s)))
+        {
+            var pixels = s.Displays.Where(d => d.IsInternal)
+                .Select(d => PixelDefectPolicy.Summarize(t, d)).FirstOrDefault(x => x.Any);
             costs.Add(new CostItem(CostKind.Repair, ComponentKind.Display,
                 S("Thay tấm nền màn hình laptop", "Replace the laptop screen panel"),
+                (pixels is not null ? S($"Điểm ảnh lỗi đã đánh dấu: {pixels.CountsText}. ", $"Marked pixel defects: {pixels.CountsText}. ") : string.Empty) +
                 S("Bài soi màn hình không đạt (điểm chết, hở sáng, ám màu hoặc sọc). Tấm nền IPS/độ phân giải cao ở mức giá trên.",
                   "The screen test failed (dead pixels, bleed, tint or stripes). IPS / high-resolution panels cost toward the top of the range."),
                 1_200_000, 3_500_000));
+        }
 
         if (t.UsbOk == false)
             costs.Add(new CostItem(CostKind.Repair, ComponentKind.Motherboard,
@@ -289,4 +295,9 @@ public sealed class PurchaseAdvisor
                 $"or to fix all the items above before handover. A fair reduction is within {rangeText}.")
             : string.Empty;
     }
+
+    /// <summary>Có màn nào bị đánh dấu điểm ảnh lỗi vượt ngưỡng ISO hoặc nằm ở vùng giữa không.</summary>
+    private static bool HasSeriousPixelDefects(SystemSnapshot s) =>
+        s.Displays.Where(d => !s.IsLaptop || d.IsInternal)
+            .Any(d => PixelDefectPolicy.Summarize(s.DeviceTests, d).Serious);
 }

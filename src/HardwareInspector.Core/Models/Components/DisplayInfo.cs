@@ -1,3 +1,4 @@
+using HardwareInspector.Core.Utils;
 using static HardwareInspector.Core.Localization.Loc;
 
 namespace HardwareInspector.Core.Models.Components;
@@ -38,6 +39,9 @@ public sealed class DisplayInfo
     public int? NativeHeightPx { get; set; }
     public int? MaxRefreshHz { get; set; }
     public bool EdidAvailable { get; set; }
+
+    /// <summary>Toạ độ màu gốc tấm nền khai trong EDID (byte 25–34). Null khi không đọc được.</summary>
+    public Chromaticity? Primaries { get; set; }
 
     /// <summary>
     /// Kiểu tín hiệu vào mà màn hình tự khai trong EDID (byte 20, bit 7).

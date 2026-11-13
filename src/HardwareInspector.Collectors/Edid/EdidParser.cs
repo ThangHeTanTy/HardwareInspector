@@ -1,5 +1,6 @@
 using System.Text;
 using HardwareInspector.Core.Models.Components;
+using HardwareInspector.Core.Utils;
 
 namespace HardwareInspector.Collectors.Edid;
 
@@ -44,9 +45,28 @@ public static class EdidParser
             };
         }
 
+        ParseChromaticity(edid, target);
         ParseDescriptors(edid, target);
         ParsePreferredTiming(edid, target);
         return true;
+    }
+
+    /// <summary>
+    /// Byte 25–34: toạ độ CIE xy của đỏ, lục, lam và điểm trắng, mỗi giá trị 10 bit.
+    /// Tám bit cao nằm ở byte 27–34, hai bit thấp gom vào byte 25 (đỏ, lục) và 26 (lam, trắng).
+    /// </summary>
+    private static void ParseChromaticity(byte[] edid, DisplayInfo target)
+    {
+        double V(int high, int lowByte, int shift) =>
+            ((edid[high] << 2) | ((edid[lowByte] >> shift) & 0x03)) / 1024d;
+
+        var c = new Chromaticity(
+            V(27, 25, 6), V(28, 25, 4),
+            V(29, 25, 2), V(30, 25, 0),
+            V(31, 26, 6), V(32, 26, 4),
+            V(33, 26, 2), V(34, 26, 0));
+
+        target.Primaries = ColorGamut.IsPlausible(c) ? c : null;
     }
 
     private static void ParseDescriptors(byte[] edid, DisplayInfo target)

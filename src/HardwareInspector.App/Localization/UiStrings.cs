@@ -204,8 +204,28 @@ public sealed class UiStrings : INotifyPropertyChanged
             "Tắt bớt đèn phòng trước khi bắt đầu. Nhìn sát màn hình khoảng 30 cm và quét mắt theo từng vùng.",
             "Dim the room lights before you start. Look at the screen from about 30 cm and scan it area by area."),
         ["Screen.Keys"] = new(
-            "Chuột trái hoặc phím Cách: bài kế tiếp · Backspace: bài trước · G: bật/tắt lưới soi vùng · H: ẩn bảng này · Esc: thoát",
-            "Left click or Space: next test · Backspace: previous · G: toggle inspection grid · H: hide this panel · Esc: exit"),
+            "Chuột trái hoặc phím Cách: bài kế tiếp · Backspace: bài trước · Chuột phải: đánh dấu/xoá điểm lỗi · M: ẩn/hiện vòng đánh dấu · " +
+            "F: nháy màu chữa điểm kẹt tại con trỏ · G: lưới soi vùng · H: ẩn bảng này · Esc: thoát",
+            "Left click or Space: next test · Backspace: previous · Right click: mark/unmark a defect · M: show/hide marks · " +
+            "F: flash colours at the cursor to revive a stuck pixel · G: inspection grid · H: hide this panel · Esc: exit"),
+        ["Screen.MarkHelp"] = new(
+            "Thấy chấm lạ thì chuột phải đúng vào đó để đánh dấu. Loại lỗi tự suy theo nền đang hiện: chấm sáng trên nền đen là điểm sáng, " +
+            "chấm đen trên nền trắng là điểm chết, chấm lệch màu trên nền đỏ/lục/lam là lỗi kênh màu. Kết quả được tính vào kết luận mua. " +
+            "Bụi thường mờ, to hơn một điểm ảnh và đổi hình khi nhìn nghiêng; điểm chết sắc nét đúng một chấm — soi bằng camera điện thoại zoom sát nếu chưa chắc.",
+            "When you see an odd dot, right-click exactly on it. The defect type follows the background: a bright dot on black is a bright pixel, " +
+            "a black dot on white is a dead pixel, an off-colour dot on red/green/blue is a subpixel defect. Results feed into the buying verdict. " +
+            "Dust is usually blurry, larger than one pixel and changes when viewed at an angle; a dead pixel is one sharp dot — zoom in with a phone camera if unsure."),
+        ["Screen.Marked"] = new("Đã đánh dấu {0} ({1}). Chuột phải lần nữa vào đúng chỗ để xoá.", "Marked a {0} ({1}). Right-click the same spot again to remove it."),
+        ["Screen.Removed"] = new("Đã xoá đánh dấu {0}.", "Removed the {0} mark."),
+        ["Screen.CenterZone"] = new("vùng giữa màn", "centre zone"),
+        ["Screen.EdgeZone"] = new("vùng rìa", "edge zone"),
+        ["Screen.Summary"] = new("Đã đánh dấu: {0}", "Marked: {0}"),
+        ["Screen.OverIso"] = new(" — vượt ngưỡng ISO 9241-307", " — exceeds ISO 9241-307"),
+        ["Screen.Flashing"] = new(
+            "Đang nháy màu quanh con trỏ để chữa điểm kẹt. Để chạy 5–10 phút rồi kiểm tra lại. Nhấn F hoặc Esc để dừng. " +
+            "Không nhìn chằm chằm nếu bạn nhạy cảm với ánh sáng nhấp nháy.",
+            "Flashing colours around the cursor to revive a stuck pixel. Leave it 5–10 minutes, then check again. Press F or Esc to stop. " +
+            "Do not stare at it if you are sensitive to flashing light."),
         ["Screen.Target"] = new("Đang kiểm tra: {0}", "Testing: {0}"),
         ["Screen.TargetPrimary"] = new("Đang kiểm tra màn hình chính", "Testing the primary display"),
         ["Screen.Counter"] = new("Bài {0}/{1}", "Test {0}/{1}")
