@@ -13,7 +13,7 @@
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />   <!-- Thanh lệnh -->
       <RowDefinition Height="Auto" />   <!-- Tiến độ -->
-      <RowDefinition Height="Auto" />   <!-- Dự phòng, để giữ số thứ tự các hàng -->
+      <RowDefinition Height="Auto" />   <!-- Cảnh báo thiếu quyền Administrator -->
       <RowDefinition Height="*" />      <!-- Kết luận (40%) + nội dung (60%) -->
       <RowDefinition Height="Auto" />   <!-- Trạng thái -->
     </Grid.RowDefinitions>
@@ -113,6 +113,19 @@
       </DockPanel>
       <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="100" Height="4" />
     </StackPanel>
+
+    <!-- Thiếu quyền Administrator: báo rõ phần nào bị mất, kèm nút chạy lại qua UAC -->
+    <Border Grid.Row="2" Margin="0,0,0,12" Padding="12,8" CornerRadius="6"
+            Background="#33F4A259" BorderBrush="#F4A259" BorderThickness="1"
+            Visibility="{Binding IsNotElevated, Converter={StaticResource BoolToVisibility}}">
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Margin="12,0,0,0" VerticalAlignment="Center"
+                Content="{Binding [Admin.Relaunch], Source={StaticResource Ui}}"
+                Command="{Binding RelaunchAsAdminCommand}" />
+        <TextBlock Text="{Binding [Admin.Banner], Source={StaticResource Ui}}" TextWrapping="Wrap"
+                   VerticalAlignment="Center" />
+      </DockPanel>
+    </Border>
 
     <!-- ========== Kết luận tổng ==========
          Chiếm 40% phần còn lại của cửa sổ, 60% dành cho phần đánh giá chi tiết bên dưới.

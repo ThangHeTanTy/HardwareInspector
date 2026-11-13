@@ -151,6 +151,12 @@ public sealed class UiStrings : INotifyPropertyChanged
             "This list adapts to what was just found on this machine. Work through all of it before you hand over money. The buttons under each item open the official page of a specialist tool — avoid third-party download sites, a common source of malware."),
 
         // --- Trạng thái ---
+        ["Admin.Banner"] = new(
+            "Đang chạy không có quyền Administrator: không đọc được S.M.A.R.T. ổ cứng, nhiệt độ/quạt và một phần kiểm tra khoá máy. Các phần còn lại vẫn dùng bình thường.",
+            "Running without Administrator rights: drive S.M.A.R.T., temperatures/fans and part of the lock checks are unavailable. Everything else works normally."),
+        ["Admin.Relaunch"] = new("Chạy lại với quyền Admin", "Restart as Admin"),
+        ["Admin.Declined"] = new("Chưa cấp quyền Administrator — tiếp tục chạy với quyền hiện tại.",
+                                 "Administrator rights not granted — continuing with current rights."),
         ["Status.Ready"] = new("Sẵn sàng. Nhấn \"Bắt đầu kiểm tra\" để quét toàn bộ máy.",
                               "Ready. Press \"Start inspection\" to scan the whole machine."),
         ["Status.Portable"] = new("Chạy từ USB — biên bản lưu trong thư mục BienBan cạnh file .exe",
