@@ -613,10 +613,27 @@ public sealed class DeviceTestWindow : Window
         var panel = new StackPanel();
         panel.Children.Add(Hint(S(
             "Bài kiểm tra chạy toàn màn hình qua nền đen, trắng, đỏ, lục, lam, xám và dải chuyển màu. Làm trong phòng tối. " +
-            "Không đạt nếu có điểm chết hoặc điểm sáng ở giữa màn, hở sáng loang rộng, ám màu theo vùng, sọc hoặc nhấp nháy.",
+            "Không đạt nếu có điểm chết hoặc điểm sáng ở giữa màn, hở sáng loang rộng, ám màu theo vùng, sọc hoặc nhấp nháy. " +
+            "Thấy chấm lỗi thì chuột phải vào đó để đánh dấu — số điểm được đối chiếu với chuẩn ISO 9241-307 và tính vào kết luận mua.",
             "The test cycles full screen through black, white, red, green, blue, grey and gradients. Do it in a dark room. " +
-            "Fail it for dead or stuck pixels near the centre, wide backlight bleed, patchy colour tint, stripes or flicker.")));
+            "Fail it for dead or stuck pixels near the centre, wide backlight bleed, patchy colour tint, stripes or flicker. " +
+            "Right-click any defect to mark it — the count is checked against ISO 9241-307 and feeds into the buying verdict.")));
         panel.Children.Add(open);
+
+        var marks = new TextBlock { Foreground = BrText, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12) };
+        void RefreshMarks()
+        {
+            var n = _result.PixelDefects.Count;
+            marks.Text = n == 0
+                ? S("Chưa đánh dấu điểm lỗi nào.", "No defects marked yet.")
+                : S($"Đã đánh dấu {n} điểm lỗi: ", $"{n} defect(s) marked: ") +
+                  string.Join(", ", _result.PixelDefects.GroupBy(m => m.Kind).Select(g => $"{g.Count()} {PixelDefectMark.KindName(g.Key)}"));
+        }
+        RefreshMarks();
+        // Cửa sổ kiểm tra màn hình đóng lại thì cửa sổ này được kích hoạt — cập nhật số điểm lúc đó.
+        Activated += (_, _) => RefreshMarks();
+        panel.Children.Add(marks);
+
         panel.Children.Add(VerdictRow(S("Màn hình", "Screen"), _result.ScreenOk, v => _result.ScreenOk = v));
         return Card(panel);
     }

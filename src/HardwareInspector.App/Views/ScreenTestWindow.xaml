@@ -6,7 +6,8 @@
         WindowStyle="None" WindowState="Maximized" ResizeMode="NoResize"
         WindowStartupLocation="Manual" ShowInTaskbar="False"
         Background="Black" Cursor="None"
-        KeyDown="OnKeyDown" MouseLeftButtonDown="OnClick">
+        KeyDown="OnKeyDown" MouseLeftButtonDown="OnClick" MouseRightButtonDown="OnRightClick"
+        MouseMove="OnMouseMove">
 
   <Grid>
     <!-- Lớp nền: đổi theo từng bài kiểm tra -->
@@ -22,20 +23,34 @@
       </UniformGrid.Resources>
     </UniformGrid>
 
+    <!-- Vòng đánh dấu điểm lỗi và ô nháy màu. Không nhận chuột để click xuyên xuống cửa sổ. -->
+    <Canvas x:Name="MarkLayer" IsHitTestVisible="False" />
+
     <!-- Bảng hướng dẫn, ẩn đi khi đang soi -->
     <Border x:Name="HelpPanel" Background="#CC0F1115" CornerRadius="10" Padding="26"
-            HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="620">
+            HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="660">
       <StackPanel>
         <TextBlock x:Name="StepTitle" Text="{Binding [Screen.Title], Source={StaticResource Ui}, Mode=OneTime}" FontSize="20" FontWeight="SemiBold"
                    Foreground="White" Margin="0,0,0,10" />
         <TextBlock x:Name="StepHint" Foreground="#C8CCD4" TextWrapping="Wrap" FontSize="14"
                    Text="{Binding [Screen.Intro], Source={StaticResource Ui}, Mode=OneTime}" />
-        <TextBlock Foreground="#8A8F98" Margin="0,16,0,0" FontSize="12.5" TextWrapping="Wrap"
+        <TextBlock Foreground="#E6E8EC" Margin="0,14,0,0" FontSize="13" TextWrapping="Wrap"
+                   Text="{Binding [Screen.MarkHelp], Source={StaticResource Ui}}" />
+        <TextBlock Foreground="#8A8F98" Margin="0,12,0,0" FontSize="12.5" TextWrapping="Wrap"
                    Text="{Binding [Screen.Keys], Source={StaticResource Ui}}" />
         <TextBlock x:Name="StepCounter" Foreground="#8A8F98" Margin="0,12,0,0" FontSize="12" />
+        <TextBlock x:Name="MarkSummary" Foreground="#F4A259" Margin="0,4,0,0" FontSize="12.5"
+                   FontWeight="SemiBold" TextWrapping="Wrap" />
         <TextBlock x:Name="TargetLabel" Foreground="#4C8DFF" Margin="0,4,0,0" FontSize="12"
                    TextWrapping="Wrap" />
       </StackPanel>
+    </Border>
+
+    <!-- Thông báo ngắn ở đáy màn: đánh dấu/xoá điểm, đang nháy màu -->
+    <Border x:Name="Toast" Background="#E60F1115" CornerRadius="8" Padding="16,10"
+            HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,40"
+            MaxWidth="720" Visibility="Collapsed" IsHitTestVisible="False">
+      <TextBlock x:Name="ToastText" Foreground="White" FontSize="13.5" TextWrapping="Wrap" />
     </Border>
   </Grid>
 </Window>

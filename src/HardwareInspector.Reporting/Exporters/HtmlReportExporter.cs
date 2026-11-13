@@ -58,7 +58,7 @@ public sealed class HtmlReportExporter : IReportExporter
             """);
 
         AppendAdvice(sb, a.Advice);
-        AppendDeviceTests(sb, snapshot.DeviceTests);
+        AppendDeviceTests(sb, snapshot.DeviceTests, snapshot.Displays);
 
         // Bảng tổng hợp linh kiện
         sb.Append(S("<section><h2>Tổng quan từng linh kiện</h2><table class=\"summary\"><thead><tr>" +
@@ -224,9 +224,16 @@ public sealed class HtmlReportExporter : IReportExporter
     }
 
     /// <summary>Kết quả thử bàn phím, touchpad, loa, micro, webcam làm trong ứng dụng.</summary>
-    private static void AppendDeviceTests(StringBuilder sb, Core.Models.Diagnostics.DeviceTestResult t)
+    private static void AppendDeviceTests(StringBuilder sb, Core.Models.Diagnostics.DeviceTestResult t,
+        IReadOnlyList<Core.Models.Components.DisplayInfo> displays)
     {
         if (!t.Any) return;
+
+        var pixelText = string.Join("; ", displays
+            .Select(d => (Display: d, Sum: Core.Models.Diagnostics.PixelDefectPolicy.Summarize(t, d)))
+            .Where(x => x.Sum.Any)
+            .Select(x => (displays.Count > 1 ? $"{x.Display.DisplayLabel}: " : string.Empty) +
+                         x.Sum.CountsText + (x.Sum.ExceedsIso ? S(" — vượt ngưỡng ISO 9241-307", " — exceeds ISO 9241-307") : string.Empty)));
 
         string Verdict(bool? ok) => ok switch
         {
@@ -249,7 +256,7 @@ public sealed class HtmlReportExporter : IReportExporter
             (S("Loa phải", "Right speaker"), t.SpeakerRightOk, string.Empty),
             ("Micro", t.MicOk, t.MicPeakDb is { } db ? S($"To nhất đã thu {db:0} dB", $"Loudest captured {db:0} dB") : string.Empty),
             ("Webcam", t.CameraOk, string.Join(", ", t.Cameras)),
-            (S("Màn hình", "Screen"), t.ScreenOk, string.Empty),
+            (S("Màn hình", "Screen"), t.ScreenOk, pixelText.Length > 0 ? S("Điểm ảnh lỗi: ", "Pixel defects: ") + pixelText : string.Empty),
             ("Wi-Fi", t.WifiOk, t.WifiAdapter ?? string.Empty),
             ("Bluetooth", t.BluetoothOk, string.Empty),
             (S("Cổng USB", "USB ports"), t.UsbOk, S($"{t.UsbPortsSeen.Count}{(t.UsbPortsExpected is { } e ? $"/{e}" : string.Empty)} cổng nhận thiết bị",

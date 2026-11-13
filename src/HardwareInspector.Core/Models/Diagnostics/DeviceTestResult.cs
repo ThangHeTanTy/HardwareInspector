@@ -48,6 +48,9 @@ public sealed class DeviceTestResult
     /// <summary>Kết quả bài soi điểm chết, hở sáng, ám màu do người dùng chấm.</summary>
     public bool? ScreenOk { get; set; }
 
+    /// <summary>Các điểm ảnh lỗi người dùng đánh dấu bằng chuột phải trong bài kiểm tra màn hình.</summary>
+    public List<PixelDefectMark> PixelDefects { get; } = new();
+
     // --- Cổng USB ---
     /// <summary>Các vị trí cổng đã nhận thiết bị trong bài thử.</summary>
     public List<string> UsbPortsSeen { get; } = new();
@@ -73,5 +76,5 @@ public sealed class DeviceTestResult
     public bool Any =>
         KeyboardOk.HasValue || TouchpadOk.HasValue || SpeakerLeftOk.HasValue || SpeakerRightOk.HasValue ||
         MicOk.HasValue || CameraOk.HasValue || BatteryRuntimeHours.HasValue || UsbOk.HasValue ||
-        WifiOk.HasValue || BluetoothOk.HasValue || ScreenOk.HasValue;
+        WifiOk.HasValue || BluetoothOk.HasValue || ScreenOk.HasValue || PixelDefects.Count > 0;
 }

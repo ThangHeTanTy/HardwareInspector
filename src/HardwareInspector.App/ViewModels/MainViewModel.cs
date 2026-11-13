@@ -728,7 +728,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         // Không đặt Owner: cửa sổ con luôn bị kéo về cùng màn hình với cửa sổ cha,
         // nên sẽ không sang được màn thứ hai.
-        var window = new Views.ScreenTestWindow(SelectedDisplay);
+        var window = new Views.ScreenTestWindow(SelectedDisplay, _deviceTests);
+        // Điểm lỗi đánh dấu trong bài kiểm tra được tính vào kết luận ngay khi đóng cửa sổ.
+        window.Closed += (_, _) => ApplyDeviceTests();
         window.Show();
         window.Activate();
         window.Focus();

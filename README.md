@@ -74,7 +74,7 @@ dựng lại từ dữ liệu đã thu nên không phải quét lại máy.
 | RAM | Từng thanh: hãng, part number, tốc độ danh định vs thực chạy, cấu hình kênh, ECC |
 | Ổ lưu trữ | S.M.A.R.T. đầy đủ: giờ chạy, sector hỏng, TBW, tuổi thọ NAND, cảm biến va đập |
 | Pin | Chu kỳ sạc, độ chai so với thiết kế, ngày sản xuất, chất liệu |
-| Màn hình | EDID thô: mã tấm nền thật, tuần/năm sản xuất, độ sâu màu, kích thước; cổng thật kể cả khi màn VGA đi qua bộ chuyển DP/HDMI→VGA |
+| Màn hình | EDID thô: mã tấm nền thật, tuần/năm sản xuất, độ sâu màu, kích thước; cổng thật kể cả khi màn VGA đi qua bộ chuyển DP/HDMI→VGA; độ phủ sRGB / DCI-P3 / NTSC tính từ toạ độ màu EDID; bài soi điểm chết có đánh dấu bằng chuột phải, đối chiếu ISO 9241-307 và nháy màu chữa điểm kẹt |
 | Bo mạch | Model bo, từng khe RAM / PCIe / M.2 (đang dùng hay trống), cổng ngoài và đầu cắm trên bo, RAM tối đa, trần tốc độ SSD, kênh cấp phép Windows |
 
 **BIOS không nằm trong tiêu chí chấm điểm.** BIOS đi kèm bo mạch do hãng phát hành và cập nhật;
