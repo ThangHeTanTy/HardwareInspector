@@ -24,5 +24,5 @@ if errorlevel 1 (
 
 echo Ban portable: du lieu va bien ban ghi canh file exe.> publish\portable\portable.txt
 echo.
-echo Xong. Chep toan bo thu muc publish\portable vao USB, chay HardwareInspector.exe bang quyen Administrator.
+echo Xong. Chep toan bo thu muc publish\portable vao USB, chay HardwareInspector.exe (nen chay bang quyen Administrator de doc du S.M.A.R.T. va cam bien).
 pause

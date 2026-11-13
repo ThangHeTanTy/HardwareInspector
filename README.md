@@ -170,9 +170,12 @@ dotnet run --project src/HardwareInspector.App
 
 Yêu cầu: .NET 8 SDK, Windows 10 1809 trở lên.
 
-**Bắt buộc chạy với quyền Administrator.** `app.manifest` đã khai báo `requireAdministrator`
-nên Windows sẽ tự hỏi. Không có quyền này thì mất S.M.A.R.T. và cảm biến nhiệt
-— tức là mất phần lớn giá trị của công cụ.
+**Chạy được với tài khoản user thường** (kể cả F5 trong Visual Studio không mở bằng quyền admin).
+`app.manifest` khai báo `asInvoker` nên Windows không ép hỏi quyền. Khi thiếu quyền Administrator,
+app hiện thanh cảnh báo màu cam và nút **Chạy lại với quyền Admin**; phần bị mất là S.M.A.R.T. ổ cứng,
+cảm biến nhiệt độ/quạt và một phần kiểm tra khoá máy (BitLocker). Cấu hình, RAM, khe cắm, màn hình,
+pin, bài tải CPU/GPU, thử bàn phím/thiết bị và kết luận mua vẫn chạy bình thường.
+Khi thẩm định máy thật để mua, nên chạy với quyền Administrator để có đủ dữ liệu.
 
 **Driver cảm biến.** LibreHardwareMonitor nạp driver kernel WinRing0 (dịch vụ `R0HardwareInspector`).
 Ứng dụng đặt file driver trong `%TEMP%` chứ không để cạnh file .exe, nên kể cả khi tiến trình bị dừng

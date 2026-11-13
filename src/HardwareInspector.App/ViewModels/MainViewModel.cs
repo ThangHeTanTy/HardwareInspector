@@ -67,6 +67,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         ScreenTestCommand = new RelayCommand(OpenScreenTest, () => !IsBusy);
         DeviceTestCommand = new RelayCommand(() => OpenDeviceTest());
         GuidedCommand = new RelayCommand(OpenGuided);
+        RelaunchAsAdminCommand = new RelayCommand(RelaunchAsAdmin);
         SaveComparisonCommand = new RelayCommand(SaveToComparison, () => HasResult);
         RefreshComparison();
         ExportHtmlCommand = new RelayCommand(() => ExportAsync(new HtmlReportExporter()), () => HasResult && !IsBusy);
@@ -152,6 +153,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public RelayCommand ScreenTestCommand { get; }
     public RelayCommand DeviceTestCommand { get; }
     public RelayCommand GuidedCommand { get; }
+    public RelayCommand RelaunchAsAdminCommand { get; }
+
+    /// <summary>Đang chạy thiếu quyền Administrator: hiện thanh cảnh báo kèm nút chạy lại.</summary>
+    public bool IsNotElevated { get; } = !HardwareInspector.Collectors.Components.BaseboardCollector.IsElevated();
     public RelayCommand SaveComparisonCommand { get; }
 
     // --- So sánh nhiều máy ---
@@ -682,6 +687,25 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>Mở chế độ kiểm tra từng bước — dẫn người mới đi qua đủ mọi bài theo thứ tự.</summary>
+    /// <summary>
+    /// Mở lại chính app qua UAC. Tài khoản user thường sẽ được hỏi tài khoản admin;
+    /// bấm Không thì giữ nguyên phiên hiện tại.
+    /// </summary>
+    private void RelaunchAsAdmin()
+    {
+        var exe = Environment.ProcessPath;
+        if (string.IsNullOrEmpty(exe)) return;
+        try
+        {
+            Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true, Verb = "runas" });
+            System.Windows.Application.Current.Shutdown();
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            Status = Ui["Admin.Declined"];
+        }
+    }
+
     private void OpenGuided()
     {
         if (_guidedWindow is null)

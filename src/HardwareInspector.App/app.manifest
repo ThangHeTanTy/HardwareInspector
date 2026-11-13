@@ -3,14 +3,16 @@
   <assemblyIdentity version="1.0.0.0" name="HardwareInspector.app" />
 
   <!--
-    Yêu cầu quyền Administrator ngay từ đầu.
-    Không có quyền này thì không đọc được S.M.A.R.T., biến UEFI, phân vùng EFI
-    và cảm biến nhiệt độ — tức là mất phần lớn giá trị của công cụ.
+    Chạy với quyền của người dùng hiện tại, không bắt buộc Administrator.
+    Máy công ty thường bị hạ xuống tài khoản user thường; bắt buộc quyền admin thì
+    không mở được app, kể cả khi debug trong Visual Studio. Thiếu quyền chỉ mất
+    S.M.A.R.T., cảm biến nhiệt/quạt và một phần kiểm tra khoá máy — app báo rõ
+    trên thanh cảnh báo và có nút chạy lại với quyền Administrator.
   -->
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>

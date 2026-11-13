@@ -92,7 +92,7 @@ MachineAssessment  (thứ giao diện và báo cáo tiêu thụ)
 ## Yêu cầu chạy
 
 - .NET 8 SDK, Windows 10 1809 trở lên
-- Chạy quyền Administrator (đã khai báo trong `app.manifest`)
+- Chạy được bằng user thường (`asInvoker`); có quyền Administrator thì đọc thêm S.M.A.R.T. và cảm biến
 - `dotnet restore` cần mạng để tải `LibreHardwareMonitorLib`, `System.Management` và `Vortice.Direct3D11`
 - Bài kiểm tra GPU cần card hỗ trợ Direct3D 11 (feature level 11_0); shader biên dịch lúc chạy bằng `d3dcompiler_47.dll` có sẵn trong Windows
 
